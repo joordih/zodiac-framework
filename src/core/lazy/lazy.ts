@@ -16,7 +16,8 @@ export function Lazy(options: LazyOptions) {
             ? document.createElement(options.loading)
             : document.createElement('div');
           
-          const loadPromise = import(options.path)
+          // @ts-ignore
+          const loadPromise = /* @vite-ignore */ import(options.path)
             .then(module => {
               const component = Reflect.construct(originalComponent, args, newTarget);
               if (loadingElement.parentNode) {

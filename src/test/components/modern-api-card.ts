@@ -32,6 +32,8 @@ export class ModernApiCard extends BaseComponent {
   }
 
   @EventHandler('click', '#increment')
+  @LoggerMiddleware
+  @ErrorBoundaryMiddleware
   private handleIncrement(_e: MouseEvent) {
     this.count++;
     this.render();
@@ -39,10 +41,13 @@ export class ModernApiCard extends BaseComponent {
   }
 
   @EventHandler('click', '#decrement')
+  @LoggerMiddleware
+  @ErrorBoundaryMiddleware
   private async handleDecrement(_e: MouseEvent) {
     await this.apiService.fetchData();
   }
 
+  @Render()
   render() {
     console.log("Rendering with count:", this.count);
     return this.root.innerHTML = /* html */ `
