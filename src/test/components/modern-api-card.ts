@@ -1,56 +1,64 @@
-import { Injectable } from '../../core/injection/injectable.ts';
-import { Inject } from '../../core/injection/inject.ts';
-import { Render } from '../../core/render/vdom.ts';
-import { LoggerMiddleware, ErrorBoundaryMiddleware } from '../../core/middleware/middleware.ts';
-import { ApiService } from '../services/api-data.test.ts';
-import { ZodiacComponent } from '../../core/component/zodiacComponent.ts';
-import { Event } from '../../core/events/event.ts';
-import { EventHandler } from '../../core/events/eventHandler.ts';
-import { State } from '@/core/states/state.ts';
-import { BaseComponent } from '@/core/component/baseComponent.ts';
+import { Injectable } from "../../core/injection/injectable.ts";
+import { Inject } from "../../core/injection/inject.ts";
+import { Render } from "../../core/render/vdom.ts";
+import {
+  LoggerMiddleware,
+  ErrorBoundaryMiddleware,
+} from "../../core/middleware/middleware.ts";
+import { ApiService } from "../services/api-data.test.ts";
+import { ZodiacComponent } from "../../core/component/zodiacComponent.ts";
+import { Event } from "../../core/events/event.ts";
+import { EventHandler } from "../../core/events/eventHandler.ts";
+import { State } from "@/core/states/state.ts";
+import { BaseComponent } from "@/core/component/baseComponent.ts";
 
-@ZodiacComponent("api-card")
+@ZodiacComponent("modern-api-card")
 @Injectable()
 export class ModernApiCard extends BaseComponent {
   @State()
   private count: number = 0;
 
-  @Event('counter-changed')
+  @Event("counter-changed")
   private counterChange!: (detail: { count: number }) => void;
 
-  @Inject()
+  @Inject("api-service")
   private apiService!: ApiService;
 
   constructor() {
     super(true);
-    this.root = this.attachShadow({ mode: 'open' });
     console.log("ModernApiCard constructor called");
   }
 
   connectedCallback() {
+    super.connectedCallback();
     this.render();
   }
 
-  @EventHandler('click', '#increment')
+  @EventHandler("click", "#increment")
   @LoggerMiddleware
   @ErrorBoundaryMiddleware
   private handleIncrement(_e: MouseEvent) {
     this.count++;
     this.render();
-    this.counterChange({ count: this.count });
   }
 
-  @EventHandler('click', '#decrement')
+  @EventHandler("click", "#decrement")
   @LoggerMiddleware
   @ErrorBoundaryMiddleware
   private async handleDecrement(_e: MouseEvent) {
+    if (!this.apiService) {
+      console.error(
+        "ApiService not available. Please ensure the service is registered."
+      );
+      return;
+    }
     await this.apiService.fetchData();
   }
 
   @Render()
   render() {
     console.log("Rendering with count:", this.count);
-    return this.root.innerHTML = /* html */ `
+    return (this.root.innerHTML = /* html */ `
       <div class="api-card">
         <style>
           .api-card {
@@ -99,6 +107,6 @@ export class ModernApiCard extends BaseComponent {
           <button id="decrement" type="button">Fetch Data</button>
         </div>
       </div>
-    `;
+    `);
   }
 }

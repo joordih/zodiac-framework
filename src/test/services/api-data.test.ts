@@ -3,7 +3,7 @@ import { Configurable } from "@/core/configurable.ts";
 import { IService } from "@/core/services/service.ts";
 import { ServiceData } from "@/core/services/decorator.ts";
 
-@Injectable("ApiService")
+@Injectable()
 @ServiceData("api-service")
 @Configurable({ baseUrl: "http://localhost:8080/" })
 export class ApiService implements IService {
