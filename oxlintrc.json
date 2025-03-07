@@ -7,8 +7,7 @@
   "globals": {
     "foo": "readonly"
   },
-  "settings": {
-  },
+  "settings": {},
   "rules": {
     "eqeqeq": "warn",
     "import/no-cycle": "error"

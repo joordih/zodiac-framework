@@ -6,7 +6,10 @@ import { Event } from "@/core/events/event.ts";
 import { EventHandler } from "@/core/events/eventHandler.ts";
 import { ApiService } from "../services/api-data.test.ts";
 import { Inject } from "@/core/injection/inject.ts";
-import { LoggerMiddleware, ErrorBoundaryMiddleware } from "@/core/middleware/middleware.ts";
+import {
+  LoggerMiddleware,
+  ErrorBoundaryMiddleware,
+} from "@/core/middleware/middleware.ts";
 
 @ZodiacComponent("api-card")
 @Injectable()
@@ -16,7 +19,7 @@ export class ApiCard extends BaseComponent {
 
   @Event("counter-changed")
   private counterChange!: (detail: { count: number }) => void;
-  
+
   @Inject("api-service")
   private apiService!: ApiService;
 
@@ -41,7 +44,9 @@ export class ApiCard extends BaseComponent {
   @ErrorBoundaryMiddleware
   private async handleDecrement(_e: MouseEvent) {
     if (!this.apiService) {
-      console.error("ApiService not available. Please ensure the service is registered.");
+      console.error(
+        "ApiService not available. Please ensure the service is registered."
+      );
       return;
     }
     await this.apiService.fetchData();

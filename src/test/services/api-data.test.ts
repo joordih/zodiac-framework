@@ -19,7 +19,12 @@ export class ApiService implements IService {
     console.log("ApiService unregistered!");
   }
 
-  fetchData(): void {
+  async fetchData(): Promise<void> {
     console.log(`Fetching data from ${this.config.baseUrl}`);
+
+    await fetch(this.config.baseUrl)
+      .then((response) => response.json())
+      .then((data) => console.log(data))
+      .catch((error) => console.error(error));
   }
 }
