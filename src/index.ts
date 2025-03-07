@@ -16,10 +16,7 @@ console.log("🚀 Zodiac Framework is initializing main instances...");
 await SauceContainer.autoRegister();
 console.log("✅ Services initialized");
 
-await Promise.all([
-  import("./test/components/api-card.test.ts"),
-  import("./test/components/modern-api-card.ts"),
-]);
+await import("./test/components/api-card.test.ts");
 console.log("✅ Components loaded");
 
 Router.init();

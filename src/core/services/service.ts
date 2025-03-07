@@ -1,4 +1,4 @@
 export interface IService {
-  register(): void;
-  unregister(): void;
+  register(): void | Promise<void>;
+  unregister(): void | Promise<void>;
 }

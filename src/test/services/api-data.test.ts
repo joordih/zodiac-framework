@@ -2,9 +2,13 @@ import { Injectable } from "@/core/injection/injectable.ts";
 import { Configurable } from "@/core/configurable.ts";
 import { IService } from "@/core/services/service.ts";
 import { ServiceData } from "@/core/services/decorator.ts";
+import { InjectionScope } from "@/core/injection/injection-scope.ts";
 
 @Injectable()
-@ServiceData("api-service")
+@ServiceData({
+  token: "api-service",
+  scope: InjectionScope.SINGLETON,
+})
 @Configurable({ baseUrl: "http://localhost:8080/" })
 export class ApiService implements IService {
   private config!: { baseUrl: string };

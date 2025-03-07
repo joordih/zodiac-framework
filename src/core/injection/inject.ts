@@ -1,7 +1,12 @@
 import { InjectionProperty } from "../index.js";
 import { SauceContainer } from "./sauceContainer.ts";
+import { InjectionToken } from "./injection-token.ts";
 
-export function Inject(token?: string): PropertyDecorator {
+/**
+ * Decorator for injecting dependencies into class properties
+ * @param token The token to use for dependency resolution
+ */
+export function Inject(token?: string | InjectionToken<any>): PropertyDecorator {
   return (target, propertyKey) => {
     const constructor = target.constructor as InjectionProperty;
 
@@ -9,9 +14,12 @@ export function Inject(token?: string): PropertyDecorator {
       constructor.__injections__ = [];
     }
 
+    const tokenValue = token || propertyKey.toString();
+    const tokenKey = typeof tokenValue === 'string' ? tokenValue : tokenValue.description;
+
     constructor.__injections__.push({
       propertyKey,
-      token: token || propertyKey.toString(),
+      token: tokenKey,
     });
 
     const valueKey = Symbol(`__${String(propertyKey)}__value__`);
@@ -19,12 +27,10 @@ export function Inject(token?: string): PropertyDecorator {
     Object.defineProperty(target, propertyKey, {
       get: function () {
         if (this[valueKey] === undefined) {
-          this[valueKey] = SauceContainer.resolve(
-            token || propertyKey.toString()
-          );
+          this[valueKey] = SauceContainer.resolve(tokenValue);
           if (!this[valueKey]) {
             console.warn(
-              `Service not found for token: ${token || propertyKey.toString()}`
+              `Service not found for token: ${tokenKey}`
             );
           }
         }

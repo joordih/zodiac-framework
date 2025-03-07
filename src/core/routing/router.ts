@@ -22,7 +22,6 @@ export class Router {
     console.log(`Registering route: ${path} -> ${component}`);
     this.routes.set(path, { path, component, middlewares });
 
-    // If router is already initialized, check if we need to navigate to this route
     if (this.initialized && location.pathname === path) {
       this.navigate(path, false);
     }
@@ -87,7 +86,6 @@ export class Router {
       };
 
       try {
-        // Ensure we have a router-view element
         if (!this.routerViewElement) {
           this.routerViewElement = document.querySelector("router-view");
           if (!this.routerViewElement) {
@@ -138,7 +136,6 @@ export class Router {
   }
 
   static init() {
-    // Find or create the router-view element
     this.routerViewElement = document.querySelector("router-view");
     if (!this.routerViewElement) {
       this.routerViewElement = document.createElement("router-view");
@@ -150,7 +147,6 @@ export class Router {
       this.navigate(location.pathname, false);
     });
 
-    // Add event listeners for link navigation
     document.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
       const link = target.closest("a");
@@ -160,11 +156,8 @@ export class Router {
       }
     });
 
-    // Mark as initialized
     this.initialized = true;
 
-    // Navigate to the current path without updating history
-    // This handles direct URL navigation
     console.log(`Initial navigation to: ${location.pathname}`);
     this.navigate(location.pathname, false);
   }
