@@ -1,8 +1,9 @@
+import { InjectionProperty } from "../index.js";
 import { SauceContainer } from "./sauceContainer.ts";
 
 export function Inject(token?: string): PropertyDecorator {
   return (target, propertyKey) => {
-    const constructor = target.constructor as InjectionConstructor;
+    const constructor = target.constructor as InjectionProperty;
 
     if (!constructor.__injections__) {
       constructor.__injections__ = [];

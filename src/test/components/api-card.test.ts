@@ -1,18 +1,21 @@
-import { BaseComponent } from "@/core/component/baseComponent.ts";
-import { ZodiacComponent } from "@/core/component/zodiacComponent.ts";
-import { Injectable } from "@/core/injection/injectable.ts";
-import { State } from "@/core/states/state.ts";
-import { Event } from "@/core/events/event.ts";
-import { EventHandler } from "@/core/events/eventHandler.ts";
-import { ApiService } from "../services/api-data.test.ts";
-import { Inject } from "@/core/injection/inject.ts";
+import { Injectable } from "../../core/injection/injectable.ts";
+import { Inject } from "../../core/injection/inject.ts";
+import { Render } from "../../core/render/vdom.ts";
 import {
   LoggerMiddleware,
   ErrorBoundaryMiddleware,
-} from "@/core/middleware/middleware.ts";
+} from "../../core/middleware/middleware.ts";
+import { ApiService } from "../services/api-data.test.ts";
+import { ZodiacComponent } from "../../core/component/zodiacComponent.ts";
+import { Event } from "../../core/events/event.ts";
+import { EventHandler } from "../../core/events/eventHandler.ts";
+import { State } from "@/core/states/state.ts";
+import { BaseComponent } from "@/core/component/baseComponent.ts";
+import { Route } from "@/core/routing/route.ts";
 
 @ZodiacComponent("api-card")
 @Injectable()
+@Route("/api-card")
 export class ApiCard extends BaseComponent {
   @State()
   private count: number = 0;
@@ -34,6 +37,8 @@ export class ApiCard extends BaseComponent {
   }
 
   @EventHandler("click", "#increment")
+  @LoggerMiddleware
+  @ErrorBoundaryMiddleware
   private handleIncrement(_e: MouseEvent) {
     this.count++;
     this.render();
@@ -52,24 +57,58 @@ export class ApiCard extends BaseComponent {
     await this.apiService.fetchData();
   }
 
+  @Render()
   render() {
     console.log("Rendering with count:", this.count);
-    this.root.innerHTML = /* html */ `
-      <style>
-        :host {
-          display: block;
-          padding: 1rem;
-        }
-        button {
-          padding: 0.5rem 1rem;
-          cursor: pointer;
-        }
-      </style>
-      <div>
-        <h1>Button: ${this.count}</h1>
-        <button id="increment" type="button">Click</button>
-        <button id="decrement" type="button">Click</button>
+    return (this.root.innerHTML = /* html */ `
+      <div class="api-card">
+        <style>
+          .api-card {
+            display: block;
+            padding: 1rem;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-family: system-ui, -apple-system, sans-serif;
+          }
+          h1 {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+          }
+          .button-group {
+            display: flex;
+            gap: 0.5rem;
+          }
+          button {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+          }
+          #increment {
+            background: #3498db;
+            color: white;
+          }
+          #increment:hover {
+            background: #2980b9;
+          }
+          #decrement {
+            background: #e74c3c;
+            color: white;
+          }
+          #decrement:hover {
+            background: #c0392b;
+          }
+        </style>
+        <h1>Counter Value: ${this.count}</h1>
+        <div class="button-group">
+          <button id="increment" type="button">Increment</button>
+          <button id="decrement" type="button">Fetch Data</button>
+        </div>
       </div>
-    `;
+    `);
   }
 }

@@ -43,7 +43,7 @@ export function createComponentMiddleware(
 
     descriptor.value = async function (...args: any[]) {
       const context: ComponentContext = {
-        componentName: this.constructor.name,
+        componentName: (this.constructor as any).tagName,
         methodName: propertyKey,
         args,
         state: {},
@@ -131,7 +131,7 @@ export function Middleware(
         path: location.pathname,
         params: {},
         query: new URLSearchParams(location.search),
-        component: target.constructor.name,
+        component: target.constructor.tagName,
         state: {},
       };
 

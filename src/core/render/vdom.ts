@@ -13,7 +13,7 @@ declare global {
 export class VirtualDOM {
   static createFromElement(element: HTMLElement): VNode {
     return {
-      type: element.tagName.toLowerCase(),
+      type: element.tagName,
       props: this.getElementProps(element),
       children: Array.from(element.childNodes).map((node) =>
         node.nodeType === Node.TEXT_NODE

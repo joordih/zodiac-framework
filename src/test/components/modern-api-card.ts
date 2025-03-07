@@ -11,9 +11,11 @@ import { Event } from "../../core/events/event.ts";
 import { EventHandler } from "../../core/events/eventHandler.ts";
 import { State } from "@/core/states/state.ts";
 import { BaseComponent } from "@/core/component/baseComponent.ts";
+import { Route } from "@/core/routing/route.ts";
 
 @ZodiacComponent("modern-api-card")
 @Injectable()
+@Route("/modern-api-card")
 export class ModernApiCard extends BaseComponent {
   @State()
   private count: number = 0;

@@ -1,5 +1,5 @@
-import { MiddlewareFunction, RouteContext } from '../middleware/middleware.ts';
-import { VirtualDOM } from '../render/vdom.ts';
+import { MiddlewareFunction, RouteContext } from "../middleware/middleware.ts";
+import { VirtualDOM } from "../render/vdom.ts";
 
 interface RouteDefinition {
   path: string;
@@ -11,16 +11,31 @@ export class Router {
   private static routes = new Map<string, RouteDefinition>();
   private static middlewares: MiddlewareFunction[] = [];
   private static currentVDom: any = null;
+  private static routerViewElement: Element | null = null;
+  private static initialized = false;
 
-  static register(path: string, component: string, middlewares: MiddlewareFunction[] = []) {
+  static register(
+    path: string,
+    component: string,
+    middlewares: MiddlewareFunction[] = []
+  ) {
+    console.log(`Registering route: ${path} -> ${component}`);
     this.routes.set(path, { path, component, middlewares });
+
+    // If router is already initialized, check if we need to navigate to this route
+    if (this.initialized && location.pathname === path) {
+      this.navigate(path, false);
+    }
   }
 
   static use(middleware: MiddlewareFunction) {
     this.middlewares.push(middleware);
   }
 
-  private static async runMiddlewares(context: RouteContext, middlewares: MiddlewareFunction[]): Promise<void> {
+  private static async runMiddlewares(
+    context: RouteContext,
+    middlewares: MiddlewareFunction[]
+  ): Promise<void> {
     if (middlewares.length === 0) return;
 
     const middleware = middlewares[0];
@@ -31,20 +46,27 @@ export class Router {
     });
   }
 
-  private static async renderComponent(container: Element, component: string, context: RouteContext) {
+  private static async renderComponent(
+    container: Element,
+    component: string,
+    context: RouteContext
+  ) {
     try {
+      console.log(
+        `Rendering component: ${component} for path: ${context.path}`
+      );
       const componentInstance = document.createElement(component);
-      
-      componentInstance.setAttribute('data-route-path', context.path);
-      componentInstance.setAttribute('data-component', component);
-      
+
+      componentInstance.setAttribute("data-route-path", context.path);
+      componentInstance.setAttribute("data-component", component);
+
       const vdom = VirtualDOM.createFromElement(componentInstance);
       const patches = VirtualDOM.diff(this.currentVDom, vdom);
-      
-      patches.forEach(patch => patch());
+
+      patches.forEach((patch) => patch());
       this.currentVDom = vdom;
-      
-      container.innerHTML = '';
+
+      container.innerHTML = "";
       container.appendChild(componentInstance);
     } catch (error) {
       console.error(`Error rendering component ${component}:`, error);
@@ -52,40 +74,63 @@ export class Router {
     }
   }
 
-  static async navigate(path: string) {
+  static async navigate(path: string, updateHistory = true) {
+    console.log(`Navigating to: ${path}`);
     const route = this.routes.get(path);
+
     if (route) {
       const context: RouteContext = {
         path,
         params: this.extractParams(path, route.path),
         query: new URLSearchParams(window.location.search),
-        component: route.component
+        component: route.component,
       };
 
       try {
+        // Ensure we have a router-view element
+        if (!this.routerViewElement) {
+          this.routerViewElement = document.querySelector("router-view");
+          if (!this.routerViewElement) {
+            this.routerViewElement = document.createElement("router-view");
+            document.body.appendChild(this.routerViewElement);
+            console.log("Created router-view element dynamically");
+          }
+        }
+
         await this.runMiddlewares(context, this.middlewares);
         await this.runMiddlewares(context, route.middlewares);
+        await this.renderComponent(
+          this.routerViewElement,
+          route.component,
+          context
+        );
 
-        const container = document.querySelector("router-view");
-        if (container) {
-          await this.renderComponent(container, route.component, context);
+        if (updateHistory) {
+          history.pushState({}, "", path);
         }
       } catch (error) {
-        console.error('Navigation error:', error);
+        console.error("Navigation error:", error);
+      }
+    } else {
+      console.warn(`No route found for path: ${path}`);
+      if (path !== "/" && this.routes.has("/")) {
+        this.navigate("/", updateHistory);
       }
     }
-    history.pushState({}, "", path);
   }
 
-  private static extractParams(currentPath: string, routePath: string): Record<string, string> {
+  private static extractParams(
+    currentPath: string,
+    routePath: string
+  ): Record<string, string> {
     const params: Record<string, string> = {};
-    const currentParts = currentPath.split('/');
-    const routeParts = routePath.split('/');
+    const currentParts = currentPath.split("/");
+    const routeParts = routePath.split("/");
 
     routeParts.forEach((part, index) => {
-      if (part.startsWith(':')) {
+      if (part.startsWith(":")) {
         const paramName = part.slice(1);
-        params[paramName] = currentParts[index] || '';
+        params[paramName] = currentParts[index] || "";
       }
     });
 
@@ -93,15 +138,34 @@ export class Router {
   }
 
   static init() {
-    if (!document.querySelector('router-view')) {
-      const routerView = document.createElement('router-view');
-      document.body.appendChild(routerView);
+    // Find or create the router-view element
+    this.routerViewElement = document.querySelector("router-view");
+    if (!this.routerViewElement) {
+      this.routerViewElement = document.createElement("router-view");
+      document.body.appendChild(this.routerViewElement);
+      console.log("Created router-view element dynamically");
     }
 
-    window.addEventListener('popstate', () => {
-      this.navigate(location.pathname);
+    window.addEventListener("popstate", () => {
+      this.navigate(location.pathname, false);
     });
 
-    this.navigate(location.pathname);
+    // Add event listeners for link navigation
+    document.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest("a");
+      if (link && link.getAttribute("href")?.startsWith("/")) {
+        e.preventDefault();
+        this.navigate(link.getAttribute("href") || "/");
+      }
+    });
+
+    // Mark as initialized
+    this.initialized = true;
+
+    // Navigate to the current path without updating history
+    // This handles direct URL navigation
+    console.log(`Initial navigation to: ${location.pathname}`);
+    this.navigate(location.pathname, false);
   }
 }

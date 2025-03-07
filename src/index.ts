@@ -1,3 +1,4 @@
+import "reflect-metadata";
 console.log("🚀 Zodiac Framework is starting...");
 
 import { SauceContainer } from "./core/injection/sauceContainer.ts";
@@ -15,11 +16,11 @@ console.log("🚀 Zodiac Framework is initializing main instances...");
 await SauceContainer.autoRegister();
 console.log("✅ Services initialized");
 
-Router.init();
-console.log("✅ Router initialized");
-
 await Promise.all([
   import("./test/components/api-card.test.ts"),
   import("./test/components/modern-api-card.ts"),
 ]);
 console.log("✅ Components loaded");
+
+Router.init();
+console.log("✅ Router initialized");
