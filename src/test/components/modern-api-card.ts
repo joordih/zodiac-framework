@@ -29,8 +29,8 @@ export class ModernApiCard extends BaseComponent {
     console.log("ModernApiCard constructor called");
   }
 
-  connectedCallback() {
-    super.connectedCallback();
+  async connectedCallback() {
+    await super.connectedCallback();
     this.render();
   }
 
