@@ -19,30 +19,36 @@ export class SauceContainer {
     return this.instances.get(token);
   }
 
-  static autoRegister() {
+  static async autoRegister(): Promise<void> {
     console.log("Auto-registering providers...");
 
-    this.providers.forEach((_clazz, token) => {
+    for (const [token, _clazz] of this.providers) {
       if (!this.instances.has(token)) {
         console.log(`Registering ${token}`);
         this.resolve(token);
       }
-    });
+    }
 
-    this.instances.forEach((instance, token) => {
-      const clazz = this.providers.get(token);
+    const initPromises = Array.from(this.instances).map(
+      async ([token, instance]) => {
+        const clazz = this.providers.get(token);
 
-      if (clazz && clazz.prototype.constructor.name === token) {
-        console.log(`Initializing ${token} as a service`);
+        if (clazz && clazz.prototype.constructor.name === token) {
+          console.log(`Initializing ${token} as a service`);
 
-        if (
-          typeof instance === "object" &&
-          instance !== null &&
-          "register" in instance
-        ) {
-          (instance as { register: () => void }).register();
+          if (
+            typeof instance === "object" &&
+            instance !== null &&
+            "register" in instance
+          ) {
+            await Promise.resolve(
+              (instance as { register: () => void | Promise<void> }).register()
+            );
+          }
         }
       }
-    });
+    );
+
+    await Promise.all(initPromises);
   }
 }

@@ -8,8 +8,6 @@ export class BaseComponent extends HTMLElement {
   constructor(useShadow: boolean = false) {
     super();
     this.root = useShadow ? this.attachShadow({ mode: "open" }) : this;
-    this.injectDependencies();
-    this.initialized = true;
   }
 
   protected delegateEvent(
@@ -34,15 +32,13 @@ export class BaseComponent extends HTMLElement {
     }
 
     this.eventHandlers.get(eventName)?.push(wrappedHandler);
-    // Usar root para eventos cuando se usa Shadow DOM
     const eventTarget = this.root || this;
     eventTarget.addEventListener(eventName, wrappedHandler);
   }
 
-  connectedCallback() {
-    // Solo inyectar dependencias si no se ha hecho ya
+  async connectedCallback() {
     if (!this.initialized) {
-      this.injectDependencies();
+      await this.injectDependencies();
       this.initialized = true;
     }
   }
@@ -57,52 +53,44 @@ export class BaseComponent extends HTMLElement {
     this.eventHandlers.clear();
   }
 
-  private injectDependencies() {
+  private async injectDependencies() {
     const constructor = this.constructor as any;
+    const injectionPromises: Promise<void>[] = [];
 
     if (constructor.__injections__) {
       for (const injection of constructor.__injections__) {
         const { propertyKey, token } = injection;
-        try {
-          const descriptor = Object.getOwnPropertyDescriptor(this, propertyKey);
+        injectionPromises.push(
+          (async () => {
+            try {
+              const descriptor = Object.getOwnPropertyDescriptor(
+                this,
+                propertyKey
+              );
+              if (descriptor?.get && !descriptor.set) {
+                void (this as any)[propertyKey];
+                return;
+              }
 
-          if (descriptor?.get && !descriptor.set) {
-            void (this as any)[propertyKey];
-            continue;
-          }
-
-          const dependency = SauceContainer.resolve(token);
-          if (dependency) {
-            (this as any)[propertyKey] = dependency;
-          } else {
-            console.warn(`Dependency not found for token: ${token}`);
-          }
-        } catch (error) {
-          console.warn(
-            `Error injecting dependency from decorator: ${token}`,
-            error
-          );
-        }
+              const dependency = await Promise.resolve(
+                SauceContainer.resolve(token)
+              );
+              if (dependency) {
+                (this as any)[propertyKey] = dependency;
+              } else {
+                console.warn(`Dependency not found for token: ${token}`);
+              }
+            } catch (error) {
+              console.warn(
+                `Error injecting dependency from decorator: ${token}`,
+                error
+              );
+            }
+          })()
+        );
       }
     }
 
-    const props = Object.getOwnPropertyNames(this);
-    for (const prop of props) {
-      const descriptor = Object.getOwnPropertyDescriptor(this, prop);
-
-      if (!descriptor?.get && (this as any)[prop] === undefined) {
-        try {
-          const dependency = SauceContainer.resolve(prop);
-          if (dependency) {
-            (this as any)[prop] = dependency;
-          }
-        } catch (error) {
-          // Solo mostrar warning si la propiedad parece ser una dependencia
-          if (prop.endsWith('Service') || prop.endsWith('Provider') || prop.endsWith('Manager')) {
-            console.warn(`Error injecting dependency: ${prop}`, error);
-          }
-        }
-      }
-    }
+    await Promise.all(injectionPromises);
   }
 }

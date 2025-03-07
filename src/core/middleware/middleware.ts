@@ -14,7 +14,7 @@ export interface ComponentContext {
 }
 
 export type RouteMiddlewareFunction = (
-  context: RouteContext, 
+  context: RouteContext,
   next: () => Promise<void>
 ) => Promise<void>;
 
@@ -23,19 +23,30 @@ export type ComponentMiddlewareFunction = (
   next: () => Promise<void>
 ) => Promise<void>;
 
+export type MiddlewareFunction = (
+  context: RouteContext | ComponentContext,
+  next: () => Promise<void>
+) => Promise<void>;
 
-export type MiddlewareFunction = (context: RouteContext | ComponentContext, next: () => Promise<void>) => Promise<void>;
-
-export function createComponentMiddleware(handler: (context: ComponentContext, next: () => Promise<void>) => Promise<void>) {
-  return function(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+export function createComponentMiddleware(
+  handler: (
+    context: ComponentContext,
+    next: () => Promise<void>
+  ) => Promise<void>
+) {
+  return function (
+    _target: any,
+    propertyKey: string,
+    descriptor: PropertyDescriptor
+  ) {
     const originalMethod = descriptor.value;
-    
-    descriptor.value = async function(...args: any[]) {
+
+    descriptor.value = async function (...args: any[]) {
       const context: ComponentContext = {
         componentName: this.constructor.name,
         methodName: propertyKey,
         args,
-        state: {}
+        state: {},
       };
 
       await handler(context, async () => {
@@ -47,57 +58,81 @@ export function createComponentMiddleware(handler: (context: ComponentContext, n
   };
 }
 
-export const LoggerMiddleware = createComponentMiddleware(async (context: ComponentContext, next: () => Promise<void>) => {
-  const startTime = performance.now();
-  console.log(` [${context.componentName}] ${context.methodName} started`);
-  
-  try {
-    await next();
-    const endTime = performance.now();
-    console.log(` [${context.componentName}] ${context.methodName} completed in ${(endTime - startTime).toFixed(2)}ms`);
-  } catch (error) {
-    console.error(` [${context.componentName}] ${context.methodName} failed:`, error);
-    throw error;
-  }
-});
+export const LoggerMiddleware = createComponentMiddleware(
+  async (context: ComponentContext, next: () => Promise<void>) => {
+    const startTime = performance.now();
+    console.log(` [${context.componentName}] ${context.methodName} started`);
 
-export const ErrorBoundaryMiddleware = createComponentMiddleware(async (context: ComponentContext, next: () => Promise<void>) => {
-  try {
-    await next();
-  } catch (error) {
-    console.error(`Error in ${context.componentName}.${context.methodName}:`, error);
-    const errorElement = document.createElement('div');
-    errorElement.className = 'error-boundary';
-    errorElement.innerHTML = `
+    try {
+      await next();
+      const endTime = performance.now();
+      console.log(
+        ` [${context.componentName}] ${context.methodName} completed in ${(
+          endTime - startTime
+        ).toFixed(2)}ms`
+      );
+    } catch (error) {
+      console.error(
+        ` [${context.componentName}] ${context.methodName} failed:`,
+        error
+      );
+      throw error;
+    }
+  }
+);
+
+export const ErrorBoundaryMiddleware = createComponentMiddleware(
+  async (context: ComponentContext, next: () => Promise<void>) => {
+    try {
+      await next();
+    } catch (error) {
+      console.error(
+        `Error in ${context.componentName}.${context.methodName}:`,
+        error
+      );
+      const errorElement = document.createElement("div");
+      errorElement.className = "error-boundary";
+      errorElement.innerHTML = `
       <div class="error-content">
         <h2>Something went wrong</h2>
-        <p>${error instanceof Error ? error.message : 'An unknown error occurred'}</p>
+        <p>${
+          error instanceof Error ? error.message : "An unknown error occurred"
+        }</p>
         <button onclick="window.location.reload()">Retry</button>
       </div>
     `;
-    
-    // Find the closest component root
-    const componentRoot = document.querySelector(context.componentName.toLowerCase());
-    if (componentRoot) {
-      componentRoot.innerHTML = '';
-      componentRoot.appendChild(errorElement);
+
+      const componentRoot = document.querySelector(
+        context.componentName.toLowerCase()
+      );
+      if (componentRoot) {
+        componentRoot.innerHTML = "";
+        componentRoot.appendChild(errorElement);
+      }
     }
   }
-});
+);
 
-// Original middleware for routes
-export function Middleware(middlewareFn: MiddlewareFunction | MiddlewareFunction[]) {
-  return function(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+export function Middleware(
+  middlewareFn: MiddlewareFunction | MiddlewareFunction[]
+) {
+  return function (
+    target: any,
+    _propertyKey: string,
+    descriptor: PropertyDescriptor
+  ) {
     const originalMethod = descriptor.value;
-    const middlewares = Array.isArray(middlewareFn) ? middlewareFn : [middlewareFn];
+    const middlewares = Array.isArray(middlewareFn)
+      ? middlewareFn
+      : [middlewareFn];
 
-    descriptor.value = async function(...args: any[]) {
+    descriptor.value = async function (...args: any[]) {
       const context: RouteContext = {
         path: location.pathname,
         params: {},
         query: new URLSearchParams(location.search),
         component: target.constructor.name,
-        state: {}
+        state: {},
       };
 
       let currentIndex = 0;
@@ -116,21 +151,23 @@ export function Middleware(middlewareFn: MiddlewareFunction | MiddlewareFunction
   };
 }
 
-export const AuthMiddleware = (options: { redirectTo?: string } = {}): RouteMiddlewareFunction => {
+export const AuthMiddleware = (
+  options: { redirectTo?: string } = {}
+): RouteMiddlewareFunction => {
   return async (context: RouteContext, next: () => Promise<void>) => {
-    const isAuthenticated = localStorage.getItem('auth_token') !== null;
-    
+    const isAuthenticated = localStorage.getItem("auth_token") !== null;
+
     if (!isAuthenticated && options.redirectTo) {
       window.location.href = options.redirectTo;
       return;
     }
-    
+
     context.state = {
       ...context.state,
       isAuthenticated,
-      authToken: localStorage.getItem('auth_token')
+      authToken: localStorage.getItem("auth_token"),
     };
-    
+
     await next();
   };
 };

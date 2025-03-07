@@ -15,17 +15,17 @@ export class VirtualDOM {
     return {
       type: element.tagName.toLowerCase(),
       props: this.getElementProps(element),
-      children: Array.from(element.childNodes).map(node => 
-        node.nodeType === Node.TEXT_NODE 
-          ? node.textContent || ''
+      children: Array.from(element.childNodes).map((node) =>
+        node.nodeType === Node.TEXT_NODE
+          ? node.textContent || ""
           : this.createFromElement(node as HTMLElement)
-      )
+      ),
     };
   }
 
   private static getElementProps(element: HTMLElement): Record<string, any> {
     const props: Record<string, any> = {};
-    Array.from(element.attributes).forEach(attr => {
+    Array.from(element.attributes).forEach((attr) => {
       props[attr.name] = attr.value;
     });
     return props;
@@ -33,7 +33,7 @@ export class VirtualDOM {
 
   static diff(oldNode: VNode | null, newNode: VNode): Array<() => void> {
     const patches: Array<() => void> = [];
-    
+
     if (!oldNode) {
       patches.push(() => {
         const element = document.createElement(newNode.type);
@@ -42,7 +42,9 @@ export class VirtualDOM {
       });
     } else if (oldNode.type !== newNode.type) {
       patches.push(() => {
-        const oldElement = document.querySelector(`[data-component="${oldNode.type}"]`);
+        const oldElement = document.querySelector(
+          `[data-component="${oldNode.type}"]`
+        );
         if (oldElement) {
           const newElement = document.createElement(newNode.type);
           this.applyProps(newElement, newNode.props);
@@ -53,46 +55,63 @@ export class VirtualDOM {
       });
     } else {
       const propPatches = this.diffProps(oldNode.props, newNode.props);
-      patches.push(...propPatches.map(patch => () => {
-        const element = document.querySelector(`[data-component="${newNode.type}"]`);
-        if (element) {
-          patch(element);
-          element._vdom = newNode;
-        }
-      }));
-      
-      const childPatches = this.diffChildren(oldNode.children, newNode.children);
-      patches.push(...childPatches.map(patch => () => {
-        const element = document.querySelector(`[data-component="${newNode.type}"]`);
-        if (element) {
-          patch(element);
-          element._vdom = newNode;
-        }
-      }));
+      patches.push(
+        ...propPatches.map((patch) => () => {
+          const element = document.querySelector(
+            `[data-component="${newNode.type}"]`
+          );
+          if (element) {
+            patch(element);
+            element._vdom = newNode;
+          }
+        })
+      );
+
+      const childPatches = this.diffChildren(
+        oldNode.children,
+        newNode.children
+      );
+      patches.push(
+        ...childPatches.map((patch) => () => {
+          const element = document.querySelector(
+            `[data-component="${newNode.type}"]`
+          );
+          if (element) {
+            patch(element);
+            element._vdom = newNode;
+          }
+        })
+      );
     }
-    
+
     return patches;
   }
 
-  private static diffProps(oldProps: Record<string, any>, newProps: Record<string, any>): Array<(element: Element) => void> {
+  private static diffProps(
+    oldProps: Record<string, any>,
+    newProps: Record<string, any>
+  ): Array<(element: Element) => void> {
     const patches: Array<(element: Element) => void> = [];
 
-    Object.keys(oldProps).forEach(key => {
+    Object.keys(oldProps).forEach((key) => {
       if (!(key in newProps)) {
-        patches.push(element => element.removeAttribute(key));
+        patches.push((element) => element.removeAttribute(key));
       }
     });
 
     Object.entries(newProps).forEach(([key, value]) => {
       if (oldProps[key] !== value) {
-        patches.push(element => element.setAttribute(key, value));
+        patches.push((element) => element.setAttribute(key, value));
       }
     });
 
     return patches;
   }
 
-  private static diffChildren(oldChildren: (VNode | string)[], newChildren: (VNode | string)[]): Array<(element: Element) => void> {
+  private static diffChildren(
+    oldChildren: (VNode | string)[],
+    newChildren: (VNode | string)[]
+  ): Array<(element: Element) => void> {
     const patches: Array<(element: Element) => void> = [];
     const maxLength = Math.max(oldChildren.length, newChildren.length);
 
@@ -101,8 +120,8 @@ export class VirtualDOM {
       const newChild = newChildren[i];
 
       if (!oldChild) {
-        patches.push(element => {
-          if (typeof newChild === 'string') {
+        patches.push((element) => {
+          if (typeof newChild === "string") {
             element.appendChild(document.createTextNode(newChild));
           } else {
             const newElement = document.createElement(newChild.type);
@@ -113,23 +132,23 @@ export class VirtualDOM {
           }
         });
       } else if (!newChild) {
-        patches.push(element => {
+        patches.push((element) => {
           if (element.childNodes[i]) {
             element.removeChild(element.childNodes[i]);
           }
         });
-      } else if (typeof oldChild === 'string' && typeof newChild === 'string') {
+      } else if (typeof oldChild === "string" && typeof newChild === "string") {
         if (oldChild !== newChild) {
-          patches.push(element => {
+          patches.push((element) => {
             if (element.childNodes[i]) {
               element.childNodes[i].textContent = newChild;
             }
           });
         }
-      } else if (typeof oldChild !== 'string' && typeof newChild !== 'string') {
+      } else if (typeof oldChild !== "string" && typeof newChild !== "string") {
         const childPatches = this.diff(oldChild, newChild);
-        patches.push(element => {
-          childPatches.forEach(patch => patch());
+        patches.push((_element) => {
+          childPatches.forEach((patch) => patch());
         });
       }
     }
@@ -137,15 +156,21 @@ export class VirtualDOM {
     return patches;
   }
 
-  private static applyProps(element: Element, props: Record<string, any>): void {
+  private static applyProps(
+    element: Element,
+    props: Record<string, any>
+  ): void {
     Object.entries(props).forEach(([key, value]) => {
       element.setAttribute(key, value);
     });
   }
 
-  private static applyChildren(element: Element, children: (VNode | string)[]): void {
-    children.forEach(child => {
-      if (typeof child === 'string') {
+  private static applyChildren(
+    element: Element,
+    children: (VNode | string)[]
+  ): void {
+    children.forEach((child) => {
+      if (typeof child === "string") {
         element.appendChild(document.createTextNode(child));
       } else {
         const childElement = document.createElement(child.type);
@@ -159,30 +184,42 @@ export class VirtualDOM {
 }
 
 export function Render() {
-  return function(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function (
+    target: any,
+    _propertyKey: string,
+    descriptor: PropertyDescriptor
+  ) {
     const originalMethod = descriptor.value;
-    descriptor.value = function(...args: any[]) {
+    descriptor.value = function (...args: any[]) {
       const result = originalMethod.apply(this, args);
       if (result instanceof Promise) {
-        return result.then(template => {
-          const temporaryContainer = document.createElement('div');
+        return result.then((template) => {
+          const temporaryContainer = document.createElement("div");
           temporaryContainer.innerHTML = template;
-          const vdom = VirtualDOM.createFromElement(temporaryContainer.firstElementChild as HTMLElement);
-          const element = document.querySelector(`[data-component="${target.constructor.name}"]`);
+          const vdom = VirtualDOM.createFromElement(
+            temporaryContainer.firstElementChild as HTMLElement
+          );
+          const element = document.querySelector(
+            `[data-component="${target.constructor.name}"]`
+          );
           if (element) {
             const patches = VirtualDOM.diff(element._vdom as VNode, vdom);
-            patches.forEach(patch => patch());
+            patches.forEach((patch) => patch());
             element._vdom = vdom;
           }
         });
       } else {
-        const temporaryContainer = document.createElement('div');
+        const temporaryContainer = document.createElement("div");
         temporaryContainer.innerHTML = result;
-        const vdom = VirtualDOM.createFromElement(temporaryContainer.firstElementChild as HTMLElement);
-        const element = document.querySelector(`[data-component="${target.constructor.name}"]`);
+        const vdom = VirtualDOM.createFromElement(
+          temporaryContainer.firstElementChild as HTMLElement
+        );
+        const element = document.querySelector(
+          `[data-component="${target.constructor.name}"]`
+        );
         if (element) {
           const patches = VirtualDOM.diff(element._vdom as VNode, vdom);
-          patches.forEach(patch => patch());
+          patches.forEach((patch) => patch());
           element._vdom = vdom;
         }
       }

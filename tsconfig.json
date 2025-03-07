@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES6",
+    "target": "ESNext",
     "experimentalDecorators": true,
     "useDefineForClassFields": true,
     "module": "NodeNext",
@@ -9,7 +9,7 @@
     "resolveJsonModule": true,
     "lib": ["ES6", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
-    "moduleResolution": "node16",
+    "moduleResolution": "nodenext",
     "allowImportingTsExtensions": true,
     "moduleDetection": "force",
     "noEmit": true,
