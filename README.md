@@ -2,140 +2,209 @@
 
 > ⚠️ **Nota**: Este framework está actualmente en fase de desarrollo activo. Las características y la API pueden cambiar.
 
-Un framework ligero y moderno para crear Web Components con inyección de dependencias, gestión de estado y manejo de eventos de forma elegante.
+Un framework moderno y tipado para crear Web Components con inyección de dependencias, gestión de estado, formularios reactivos, eventos tipados, routing y más.
 
 ## Características principales
 
 - 🚀 **Decoradores TypeScript para Web Components**
-- 💉 **Sistema de inyección de dependencias**
-- 🔄 **Gestión de estado reactivo**
-- 🎯 **Manejo de eventos declarativo**
-- ⚙️ **Servicios configurables**
-- 🎨 **Estilizado encapsulado**
+- 💉 **Sistema de inyección de dependencias con ámbitos**
+- 🔄 **Gestión de estado reactivo y hooks**
+- 📝 **Sistema de formularios reactivos**
+- 🎯 **Sistema de eventos tipados**
+- 🛣️ **Router tipado**
+- 📏 **Sistema de validación con decoradores**
+- 🎨 **Sistema de directivas personalizadas**
+- 🔌 **Carga diferida de componentes**
+- ⚡ **Middleware para componentes**
 
-## Uso básico
+## Ejemplos de uso
 
-### Crear un componente
+### Eventos Tipados
 
 ```typescript
-import { BaseComponent } from "@/core/component/baseComponent";
-import { ZodiacComponent } from "@/core/component/zodiacComponent";
-import { State } from "@/core/states/state";
-import { Event } from "@/core/events/event";
-import { EventHandler } from "@/core/events/eventHandler";
+// Definir los tipos de eventos
+interface AppEvents {
+  "user-submit": UserFormModel;
+  "form-reset": void;
+}
 
-@ZodiacComponent("my-counter")
-export class MyCounter extends BaseComponent {
-  @State()
-  private count: number = 0;
+// Usar el decorador TypedEvents
+@ZodiacComponent("modern-api-card")
+@TypedEvents<AppEvents>()
+export class ModernApiCard
+  extends BaseComponent
+  implements TypedEventComponent<AppEvents>
+{
+  // Los métodos emit, on, once y off se añaden automáticamente
+  emit!: <K extends keyof AppEvents>(event: K, data: AppEvents[K]) => void;
 
-  @Event("counter-changed")
-  private counterChange!: (detail: { count: number }) => void;
+  handleSubmit(e: Event) {
+    e.preventDefault();
+    if (this.form.isValid()) {
+      this.emit("user-submit", this.form.getValue());
+    }
+  }
+}
+```
 
-  constructor() {
-    super(true);
+### Formularios Reactivos
+
+```typescript
+// Modelo con validadores
+class UserFormModel {
+  @Required
+  @MinLength(3)
+  name: string = "";
+
+  @Required
+  @Email
+  email: string = "";
+}
+
+// Formulario reactivo
+export class ModernApiCard extends BaseComponent {
+  private setupForm() {
+    const nameControl = new FormControl<string>("", {
+      validators: [
+        (value) => (!value ? "Name is required" : null),
+        (value) =>
+          value.length < 3 ? "Name must be at least 3 characters" : null,
+      ],
+    });
+
+    this.form = new FormGroup<UserFormModel>({
+      name: nameControl,
+      email: new FormControl(""),
+    });
+
+    // Suscripción a cambios
+    this.form.subscribeToValue((value) => {
+      console.log("Form value changed:", value);
+    });
+  }
+}
+```
+
+### Hooks del Sistema
+
+```typescript
+export class ModernApiCard extends BaseComponent {
+  async connectedCallback() {
+    await super.connectedCallback();
+
+    // Estado local con useState
+    const [tooltipVisible, setTooltipVisible] = useState(this, false);
+
+    // Efectos con useEffect
+    useEffect(
+      this,
+      () => {
+        console.log("Component mounted");
+        return () => console.log("Cleanup");
+      },
+      {}
+    );
+
+    // Valores memorizados
+    const memoizedValue = useMemo(
+      this,
+      () => {
+        return `Memoized count: ${this.count * 2}`;
+      },
+      [this.count]
+    );
+
+    // Callbacks memorizados
+    const handleClick = useCallback(
+      this,
+      () => {
+        console.log("Callback clicked with count:", this.count);
+      },
+      [this.count]
+    );
+
+    // Inyección de servicios con useService
+    this.routerService = useService(this, "typed-router-service");
+  }
+}
+```
+
+### Sistema de Directivas
+
+```typescript
+export class ModernApiCard extends BaseComponent {
+  private setupDirectives() {
+    // Aplicar directivas a elementos
+    const tooltipElements = this.root.querySelectorAll("[tooltip]");
+    const clickOutsideElements = this.root.querySelectorAll("[click-outside]");
+    const lazyLoadElements = this.root.querySelectorAll("[lazy-load]");
+
+    this.directiveManager.applyDirectives([
+      ...tooltipElements,
+      ...clickOutsideElements,
+      ...lazyLoadElements,
+    ]);
   }
 
-  @EventHandler("click", "#increment")
-  private handleIncrement(_e: MouseEvent) {
-    this.count++;
-    this.render();
-  }
-
+  // Uso en el template
   render() {
-    this.root.innerHTML = /* html */ `
-      <style>
-        :host {
-          display: block;
-          padding: 1rem;
-        }
-        button {
-          padding: 0.5rem 1rem;
-          cursor: pointer;
-        }
-      </style>
-      <div>
-        <h1>Count: ${this.count}</h1>
-        <button id="increment">Increment</button>
-      </div>
+    return /* html */ `
+      <input 
+        tooltip="Enter your full name"
+        tooltip-position="top"
+        click-outside
+        lazy-load
+      >
     `;
   }
 }
 ```
 
-### Crear un servicio
+### Servicios con Ámbito
 
 ```typescript
-import { Injectable } from "@/core/injection/injectable";
-import { Configurable } from "@/core/configurable";
-import { IService } from "@/core/services/service";
-import { ServiceData } from "@/core/services/decorator";
-
-@Injectable("ApiService")
-@ServiceData("api-service")
+@Injectable()
+@ServiceData({
+  token: "api-service",
+  scope: InjectionScope.SINGLETON,
+})
 @Configurable({ baseUrl: "http://localhost:8080/" })
 export class ApiService implements IService {
   private config!: { baseUrl: string };
 
-  constructor() {
-    this.config = (this as any).__config__;
+  async onInit(): Promise<void> {
+    // Inicialización asíncrona
   }
 
-  register(): void {
-    console.log("ApiService registered!");
-  }
-
-  unregister(): void {
-    console.log("ApiService unregistered!");
-  }
-
-  fetchData(): void {
-    console.log(`Fetching data from ${this.config.baseUrl}`);
+  async onDestroy(): Promise<void> {
+    // Limpieza de recursos
   }
 }
 ```
 
-### Inyección de dependencias en componentes
+### Router Tipado
 
 ```typescript
-import { Inject } from "@/core/injection/inject";
-
-@ZodiacComponent("api-card")
-@Injectable()
-export class ApiCard extends BaseComponent {
-  @Inject()
-  private apiService!: ApiService;
-
-  @EventHandler("click", "#fetch-data")
-  private handleFetch() {
-    this.apiService.fetchData();
+@Route("/modern-api")
+export class ModernApiCard extends BaseComponent {
+  constructor() {
+    super(true);
+    this.routerService.navigate("/modern-api", {
+      params: { id: "123" },
+    });
   }
 }
 ```
 
-## Características detalladas
+## Instalación
 
-### Decoradores disponibles
-
-- `@ZodiacComponent(name)`: Define un Web Component
-- `@Injectable()`: Marca una clase como inyectable
-- `@Inject()`: Inyecta una dependencia
-- `@State()`: Define una propiedad reactiva
-- `@Event(name)`: Define un evento personalizado
-- `@EventHandler(event, selector)`: Maneja eventos del DOM
-- `@Configurable(config)`: Permite configuración de servicios
-- `@ServiceData(name)`: Define metadatos del servicio
-
-### Ciclo de vida
-
-Los componentes heredan de `BaseComponent` que proporciona:
-- `constructor`: Inicialización del componente
-- `connectedCallback`: Cuando el componente se monta en el DOM
-- `render`: Método para actualizar la vista
+```bash
+~~npm install zodiac-framework~~
+```
 
 ## Contribución
 
-Las contribuciones son bienvenidas. Por favor, revisa las guías de contribución antes de enviar un pull request.
+~~Las contribuciones son bienvenidas. Por favor, revisa las guías de contribución antes de enviar un pull request.~~
 
 ## Licencia
 
@@ -143,4 +212,4 @@ MIT
 
 ---
 
-Para más información y documentación detallada, visita nuestra [documentación completa](https://github.com/joordih/zodiac-framework/wiki).
+Para más información y documentación detallada, visita nuestra ~~[documentación completa](https://github.com/joordih/zodiac-framework/wiki)~~ **PRONTO**.
