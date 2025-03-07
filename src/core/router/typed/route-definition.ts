@@ -3,7 +3,14 @@ export interface RouteParams {
 }
 
 export interface RouteQueryParams {
-  [key: string]: string | number | boolean | string[] | number[] | boolean[] | undefined;
+  [key: string]:
+    | string
+    | number
+    | boolean
+    | string[]
+    | number[]
+    | boolean[]
+    | undefined;
 }
 
 export interface TypedRoute<
@@ -14,6 +21,9 @@ export interface TypedRoute<
   component: string;
   title?: string;
   meta?: Record<string, any>;
-  canActivate?: (params: Params, queryParams: QueryParams) => boolean | string | Promise<boolean | string>;
+  canActivate?: (
+    params: Params,
+    queryParams: QueryParams
+  ) => boolean | string | Promise<boolean | string>;
   children?: Array<TypedRoute<any, any>>;
 }

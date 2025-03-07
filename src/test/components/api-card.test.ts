@@ -1,34 +1,30 @@
 import { TypedEventComponent } from "@/core/events/typed/typed-event-component.ts";
 import { FormControl } from "@/core/forms/form-control.ts";
 import { FormGroup } from "@/core/forms/form-group.ts";
-import { BaseComponent } from "../../core/component/baseComponent.ts";
+import { BaseComponent } from "@/core/component/baseComponent.ts";
 import {
   useCallback,
   useEffect,
   useMemo,
   useService,
   useState,
-} from "../../core/component/hooks/index.ts";
-import { ZodiacComponent } from "../../core/component/zodiacComponent.ts";
-import { DirectiveManager } from "../../core/directives/directive-manager.ts";
-import { Event } from "../../core/events/event.ts";
-import { EventHandler } from "../../core/events/eventHandler.ts";
-import { TypedEvents } from "../../core/events/typed/typed-event-decorator.ts";
-import { Inject } from "../../core/injection/inject.ts";
-import { Injectable } from "../../core/injection/injectable.ts";
+} from "@/core/component/hooks/index.ts";
+import { ZodiacComponent } from "@/core/component/zodiacComponent.ts";
+import { DirectiveManager } from "@/core/directives/directive-manager.ts";
+import { Event } from "@/core/events/event.ts";
+import { EventHandler } from "@/core/events/eventHandler.ts";
+import { TypedEvents } from "@/core/events/typed/typed-event-decorator.ts";
+import { Inject } from "@/core/injection/inject.ts";
+import { Injectable } from "@/core/injection/injectable.ts";
 import {
   ErrorBoundaryMiddleware,
   LoggerMiddleware,
-} from "../../core/middleware/middleware.ts";
-import { Render } from "../../core/render/vdom.ts";
-import { TypedRouterService } from "../../core/router/typed/router-service.ts";
-import { Route } from "../../core/routing/route.ts";
-import { State } from "../../core/states/state.ts";
-import {
-  Email,
-  MinLength,
-  Required,
-} from "../../core/validation/validators.ts";
+} from "@/core/middleware/middleware.ts";
+import { Render } from "@/core/render/vdom.ts";
+import { TypedRouterService } from "@/core/router/typed/router-service.ts";
+import { Route } from "@/core/routing/route.ts";
+import { State } from "@/core/states/state.ts";
+import { Email, MinLength, Required } from "@/core/validation/validators.ts";
 import { ApiService } from "../services/api-data.test.ts";
 
 class UserFormModel {

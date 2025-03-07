@@ -9,7 +9,7 @@ export interface ServiceDataOptions {
 
 export function ServiceData(options: ServiceDataOptions): ClassDecorator {
   const { token, scope = InjectionScope.SINGLETON } = options;
-  
+
   return (target) => {
     SauceContainer.register(token, target as any, scope);
     Reflect.defineMetadata("zodiac:service", { token }, target);

@@ -12,7 +12,9 @@ export function EventHandler(
     const originalConnectedCallback = target.connectedCallback;
     const originalDisconnectedCallback = target.disconnectedCallback;
 
-    target.connectedCallback = function (this: HTMLElement & { root?: ShadowRoot | HTMLElement }) {
+    target.connectedCallback = function (
+      this: HTMLElement & { root?: ShadowRoot | HTMLElement }
+    ) {
       if (originalConnectedCallback) {
         originalConnectedCallback.call(this);
       }
@@ -23,7 +25,9 @@ export function EventHandler(
           (this as any)[propertyKey].call(this, event);
         } else {
           const target = event.target as Element;
-          const matchingElement = target.matches(selector) ? target : target.closest(selector);
+          const matchingElement = target.matches(selector)
+            ? target
+            : target.closest(selector);
           if (matchingElement) {
             (this as any)[propertyKey].call(this, event, matchingElement);
           }
@@ -33,11 +37,20 @@ export function EventHandler(
       (this as any)[`__${String(propertyKey)}_handler`] = handler;
 
       const eventTarget = this.root || this;
-      console.log("Adding event listener to", eventTarget, "for event", eventName, "with selector", selector);
+      console.log(
+        "Adding event listener to",
+        eventTarget,
+        "for event",
+        eventName,
+        "with selector",
+        selector
+      );
       eventTarget.addEventListener(eventName, handler, options);
     };
 
-    target.disconnectedCallback = function (this: HTMLElement & { root?: ShadowRoot | HTMLElement }) {
+    target.disconnectedCallback = function (
+      this: HTMLElement & { root?: ShadowRoot | HTMLElement }
+    ) {
       const handler = (this as any)[`__${String(propertyKey)}_handler`];
       const eventTarget = this.root || this;
 

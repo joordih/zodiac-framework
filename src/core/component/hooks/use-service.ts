@@ -6,9 +6,5 @@ export function useService<T>(
   component: any,
   token: string | InjectionToken<T>
 ): T {
-  return useMemo(
-    component,
-    () => SauceContainer.resolve<T>(token),
-    []
-  );
+  return useMemo(component, () => SauceContainer.resolve<T>(token), []);
 }
