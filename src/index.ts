@@ -10,6 +10,7 @@ export { Injectable } from "./core/injection/injectable.ts";
 export { Inject } from "./core/injection/inject.ts";
 
 import "./test/services/api-data.test.ts";
+import "./test/services/theme-service.ts";
 
 console.log("🚀 Zodiac Framework is initializing main instances...");
 
@@ -17,6 +18,7 @@ await SauceContainer.autoRegister();
 console.log("✅ Services initialized");
 
 await import("./test/components/api-card.test.ts");
+await import("./test/components/admin-panel.ts");
 console.log("✅ Components loaded");
 
 Router.init();
