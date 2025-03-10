@@ -130,7 +130,7 @@ export class ModernApiCard
   async disconnectedCallback() {
     try {
       if (this.form) {
-        const unsubscribe = this.form.subscribeToValue(() => {});
+        const unsubscribe = this.form.subscribeToValue(() => { });
         if (typeof unsubscribe === "function") {
           unsubscribe();
         }
@@ -310,114 +310,230 @@ export class ModernApiCard
 
       return (this.root.innerHTML = /* html */ `
         <div class="modern-api-card">
-          <style>
-            .modern-api-card {
+        <style>
+          .modern-api-card {
+              --background: hsl(240, 10%, 3.9%);
+              --foreground: hsl(0, 0%, 98%);
+              --card: hsl(240, 10%, 7%);
+              --card-foreground: hsl(0, 0%, 98%);
+              --popover: hsl(240, 10%, 7%);
+              --popover-foreground: hsl(0, 0%, 98%);
+              --primary: hsl(240, 5.9%, 10%);
+              --primary-foreground: hsl(0, 0%, 98%);
+              --secondary: hsl(240, 3.7%, 15.9%);
+              --secondary-foreground: hsl(0, 0%, 98%);
+              --muted: hsl(240, 3.7%, 15.9%);
+              --muted-foreground: hsl(240, 5%, 64.9%);
+              --accent: hsl(240, 3.7%, 15.9%);
+              --accent-foreground: hsl(0, 0%, 98%);
+              --destructive: hsl(0, 62.8%, 30.6%);
+              --destructive-foreground: hsl(0, 0%, 98%);
+              --border: hsl(240, 3.7%, 15.9%);
+              --input: hsl(240, 3.7%, 15.9%);
+              --ring: hsl(240, 4.9%, 83.9%);
+              --radius: 0.5rem;
+              
               display: block;
               padding: 1.5rem;
-              background: #ffffff;
-              border-radius: 12px;
-              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+              background: var(--card);
+              color: var(--card-foreground);
+              border-radius: var(--radius);
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
               font-family: system-ui, -apple-system, sans-serif;
               max-width: 500px;
+              width: 100%;
               margin: 0 auto;
+              box-sizing: border-box;
             }
+            
+            /* Aseguramos que todos los elementos respeten el box-sizing */
+            *, *::before, *::after {
+              box-sizing: border-box;
+            }
+            
             h1 {
-              color: #2c3e50;
+              color: var(--foreground);
               font-size: 1.8rem;
               margin-bottom: 1rem;
               text-align: center;
+              font-weight: 600;
             }
+            
             .button-group {
               display: flex;
               gap: 0.8rem;
               justify-content: center;
               margin-bottom: 2rem;
+              flex-wrap: wrap;
             }
+            
             button {
               padding: 0.6rem 1.2rem;
               cursor: pointer;
               border: none;
-              border-radius: 6px;
-              font-weight: 600;
+              border-radius: var(--radius);
+              font-weight: 500;
               transition: all 0.2s ease;
             }
+            
             #increment {
-              background: #3498db;
+              background: hsl(217, 91%, 60%);
               color: white;
             }
+            
             #increment:hover {
-              background: #2980b9;
+              background: hsl(217, 91%, 55%);
             }
+            
             #decrement {
-              background: #e74c3c;
+              background: hsl(0, 84%, 60%);
               color: white;
             }
+            
             #decrement:hover {
-              background: #c0392b;
+              background: hsl(0, 84%, 55%);
             }
+            
             .form-group {
               margin-bottom: 1.2rem;
+              width: 100%;
             }
+            
             label {
               display: block;
               margin-bottom: 0.5rem;
               font-weight: 500;
-              color: #34495e;
+              color: var(--foreground);
             }
+            
             input {
               width: 100%;
               padding: 0.8rem;
-              border: 1px solid #ddd;
-              border-radius: 4px;
+              border: 1px solid var(--border);
+              background-color: var(--input);
+              color: var(--foreground);
+              border-radius: var(--radius);
               font-size: 1rem;
+              max-width: 100%;
             }
+            
             input:focus {
               outline: none;
-              border-color: #3498db;
-              box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+              border-color: hsl(217, 91%, 60%);
+              box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
             }
+            
+            input::placeholder {
+              color: var(--muted-foreground);
+            }
+            
             .error {
-              color: #e74c3c;
+              color: hsl(0, 84%, 60%);
               font-size: 0.85rem;
               margin-top: 0.4rem;
             }
+            
             .form-actions {
               display: flex;
               justify-content: space-between;
               margin-top: 1.5rem;
+              flex-wrap: wrap;
+              gap: 0.8rem;
             }
+            
             .submit-btn {
-              background: #2ecc71;
-              color: white;
+              background: hsl(142, 71%, 45%);
+              color: hsl(240, 10%, 3.9%);
+              font-weight: 600;
+              flex: 1;
             }
+            
             .submit-btn:hover {
-              background: #27ae60;
+              background: hsl(142, 71%, 40%);
             }
+            
             .reset-btn {
-              background: #95a5a6;
-              color: white;
+              background: var(--secondary);
+              color: var(--secondary-foreground);
+              flex: 1;
             }
+            
             .reset-btn:hover {
-              background: #7f8c8d;
+              background: hsl(240, 3.7%, 20%);
             }
+            
             .card-section {
               padding: 1rem;
               margin-bottom: 1rem;
-              border: 1px solid #eee;
-              border-radius: 8px;
+              border: 1px solid var(--border);
+              border-radius: var(--radius);
+              background: var(--primary);
+              width: 100%;
+              overflow: hidden;
             }
+            
             .card-section h2 {
               font-size: 1.2rem;
               margin-bottom: 0.8rem;
-              color: #2c3e50;
+              color: var(--foreground);
+              font-weight: 600;
             }
+            
             .clickable-area {
               padding: 1rem;
-              background: #f8f9fa;
-              border-radius: 6px;
+              background: var(--secondary);
+              border-radius: var(--radius);
               text-align: center;
               cursor: pointer;
               margin-top: 1rem;
+              transition: background-color 0.2s ease;
+              word-wrap: break-word;
+            }
+            
+            .clickable-area:hover {
+              background: var(--accent);
+            }
+            
+            p {
+              color: var(--foreground);
+              word-wrap: break-word;
+            }
+            
+            /* Media queries para responsividad */
+            @media (max-width: 600px) {
+              .modern-api-card {
+                padding: 1rem;
+              }
+              
+              h1 {
+                font-size: 1.5rem;
+              }
+              
+              .card-section {
+                padding: 0.8rem;
+              }
+              
+              .form-actions {
+                flex-direction: column;
+              }
+              
+              button {
+                width: 100%;
+              }
+            }
+            
+            @media (max-width: 400px) {
+              h1 {
+                font-size: 1.3rem;
+              }
+              
+              .card-section h2 {
+                font-size: 1.1rem;
+              }
+              
+              input {
+                padding: 0.6rem;
+              }
             }
           </style>
           
@@ -445,11 +561,10 @@ export class ModernApiCard
                   tooltip="Enter your full name"
                   tooltip-position="top"
                 >
-                ${
-                  nameErrors.length > 0
-                    ? `<div class="error">${nameErrors[0]}</div>`
-                    : ""
-                }
+                ${nameErrors.length > 0
+          ? `<div class="error">${nameErrors[0]}</div>`
+          : ""
+        }
               </div>
               
               <div class="form-group">
@@ -462,11 +577,10 @@ export class ModernApiCard
                   tooltip="Enter a valid email address"
                   tooltip-position="bottom"
                 >
-                ${
-                  emailErrors.length > 0
-                    ? `<div class="error">${emailErrors[0]}</div>`
-                    : ""
-                }
+                ${emailErrors.length > 0
+          ? `<div class="error">${emailErrors[0]}</div>`
+          : ""
+        }
               </div>
               
               <div class="form-actions">
@@ -488,7 +602,7 @@ export class ModernApiCard
             <div 
               class="clickable-area"
               lazy-load
-              src-lazy="https://example.com/image.jpg"
+              src-lazy="https://i1.sndcdn.com/artworks-000557467059-24r0qo-t1080x1080.jpg"
             >
               This content will lazy load
             </div>
