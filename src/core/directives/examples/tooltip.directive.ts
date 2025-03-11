@@ -10,22 +10,26 @@ export class TooltipDirective implements DirectiveLifecycle {
   private tooltipElement: HTMLElement | null = null;
   private tooltipText: string = '';
   private tooltipPosition: 'top' | 'bottom' | 'left' | 'right' = 'top';
+  private boundShowTooltip: (event: MouseEvent) => void;
+  private boundHideTooltip: (event: MouseEvent) => void;
   
   constructor(element: HTMLElement) {
     this.element = element;
+    this.boundShowTooltip = this.showTooltip.bind(this);
+    this.boundHideTooltip = this.hideTooltip.bind(this);
   }
   
   onInit(): void {
     this.tooltipText = this.element.getAttribute('tooltip') || '';
     this.tooltipPosition = (this.element.getAttribute('tooltip-position') as any) || 'top';
     
-    this.element.addEventListener('mouseenter', this.showTooltip.bind(this));
-    this.element.addEventListener('mouseleave', this.hideTooltip.bind(this));
+    this.element.addEventListener('mouseenter', this.boundShowTooltip);
+    this.element.addEventListener('mouseleave', this.boundHideTooltip);
   }
   
   onDestroy(): void {
-    this.element.removeEventListener('mouseenter', this.showTooltip.bind(this));
-    this.element.removeEventListener('mouseleave', this.hideTooltip.bind(this));
+    this.element.removeEventListener('mouseenter', this.boundShowTooltip);
+    this.element.removeEventListener('mouseleave', this.boundHideTooltip);
     
     this.removeTooltip();
   }

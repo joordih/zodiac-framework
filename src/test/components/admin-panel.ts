@@ -302,7 +302,6 @@ export class AdminPanel
               grid-template-columns: 60px 1fr;
             }
             
-            /* Dark mode variables - applied when html has .dark class */
             :host-context(html.dark) .admin-panel,
             :host-context(.dark) .admin-panel,
             .dark .admin-panel,
@@ -328,12 +327,10 @@ export class AdminPanel
               --ring: hsl(240, 4.9%, 83.9%);
             }
             
-            /* Ensure all elements respect box-sizing */
             *, *::before, *::after {
               box-sizing: border-box;
             }
             
-            /* Sidebar styles */
             .sidebar {
               background-color: var(--card);
               border-right: 1px solid var(--border);
@@ -390,7 +387,6 @@ export class AdminPanel
               background-color: var(--secondary);
             }
             
-            /* Menu styles */
             .sidebar-menu {
               display: flex;
               flex-direction: column;
@@ -431,7 +427,6 @@ export class AdminPanel
               display: none;
             }
             
-            /* Main content styles */
             .main-content {
               padding: 1.5rem;
               overflow-y: auto;
@@ -506,7 +501,6 @@ export class AdminPanel
               color: var(--muted-foreground);
             }
             
-            /* Responsive adjustments */
             @media (max-width: 768px) {
               .content-grid {
                 grid-template-columns: 1fr;

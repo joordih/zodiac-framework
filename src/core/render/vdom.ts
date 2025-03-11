@@ -12,6 +12,15 @@ declare global {
 
 export class VirtualDOM {
   static createFromElement(element: HTMLElement): VNode {
+    if (!element) {
+      console.warn('Attempted to create VNode from null element');
+      return {
+        type: 'div',
+        props: {},
+        children: []
+      };
+    }
+    
     return {
       type: element.tagName,
       props: this.getElementProps(element),
@@ -196,9 +205,14 @@ export function Render() {
         return result.then((template) => {
           const temporaryContainer = document.createElement("div");
           temporaryContainer.innerHTML = template;
-          const vdom = VirtualDOM.createFromElement(
-            temporaryContainer.firstElementChild as HTMLElement
-          );
+          const firstElement = temporaryContainer.firstElementChild as HTMLElement;
+          
+          if (!firstElement) {
+            console.warn('Render method returned empty or invalid HTML template');
+            return;
+          }
+          
+          const vdom = VirtualDOM.createFromElement(firstElement);
           const element = document.querySelector(
             `[data-component="${target.constructor.name}"]`
           );
@@ -211,9 +225,14 @@ export function Render() {
       } else {
         const temporaryContainer = document.createElement("div");
         temporaryContainer.innerHTML = result;
-        const vdom = VirtualDOM.createFromElement(
-          temporaryContainer.firstElementChild as HTMLElement
-        );
+        const firstElement = temporaryContainer.firstElementChild as HTMLElement;
+        
+        if (!firstElement) {
+          console.warn('Render method returned empty or invalid HTML template');
+          return;
+        }
+        
+        const vdom = VirtualDOM.createFromElement(firstElement);
         const element = document.querySelector(
           `[data-component="${target.constructor.name}"]`
         );

@@ -2,6 +2,7 @@ import { TypedRoute, RouteParams, RouteQueryParams } from "./route-definition.ts
 import { IService } from "../../services/service.ts";
 import { ServiceData } from "../../services/decorator.ts";
 import { InjectionScope } from "../../injection/injection-scope.ts";
+import { IRouterOutlet } from "./router-outlet-interface.ts";
 
 @ServiceData({
   token: 'typed-router-service',
@@ -11,6 +12,7 @@ export class TypedRouterService implements IService {
   private routes: Array<TypedRoute<any, any>> = [];
   private currentPath: string = '';
   private listeners: Array<(path: string) => void> = [];
+  private outlets: IRouterOutlet[] = [];
   
   async onInit(): Promise<void> {
     window.addEventListener('popstate', () => {
@@ -37,6 +39,18 @@ export class TypedRouterService implements IService {
   registerRoutes(routes: Array<TypedRoute<any, any>>): void {
     this.routes = routes;
     this.handleLocationChange();
+  }
+  
+  registerOutlet(outlet: IRouterOutlet): void {
+    if (!this.outlets.includes(outlet)) {
+      this.outlets.push(outlet);
+      
+      // If we already have a route match, render it in the new outlet
+      const routeMatch = this.getCurrentRouteMatch();
+      if (routeMatch.route) {
+        this.activateRoute(routeMatch.route, routeMatch.params, routeMatch.queryParams);
+      }
+    }
   }
   
   navigate<
@@ -197,9 +211,8 @@ export class TypedRouterService implements IService {
       document.title = route.title;
     }
     
-    const outlet = document.querySelector('router-outlet');
-    
-    if (outlet) {
+    // Use registered outlets if available, otherwise fallback to querySelector
+    if (this.outlets.length > 0) {
       const component = document.createElement(route.component);
       
       for (const key in params) {
@@ -216,8 +229,34 @@ export class TypedRouterService implements IService {
         }
       }
       
-      outlet.innerHTML = '';
-      outlet.appendChild(component);
+      // Render in all registered outlets
+      for (const outlet of this.outlets) {
+        outlet.renderComponent(component.cloneNode(true) as HTMLElement);
+      }
+    } else {
+      // Fallback to querySelector for backward compatibility
+      const outlet = document.querySelector('router-outlet');
+      
+      if (outlet) {
+        const component = document.createElement(route.component);
+        
+        for (const key in params) {
+          component.setAttribute(`data-param-${key}`, String(params[key]));
+        }
+        
+        for (const key in queryParams) {
+          const value = queryParams[key];
+          
+          if (Array.isArray(value)) {
+            component.setAttribute(`data-query-${key}`, JSON.stringify(value));
+          } else if (value !== undefined) {
+            component.setAttribute(`data-query-${key}`, String(value));
+          }
+        }
+        
+        outlet.innerHTML = '';
+        outlet.appendChild(component);
+      }
     }
   }
   

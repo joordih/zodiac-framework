@@ -19,6 +19,7 @@ console.log("✅ Services initialized");
 
 await import("./test/components/api-card.test.ts");
 await import("./test/components/admin-panel.ts");
+await import("./test/components/dashboard.ts");
 console.log("✅ Components loaded");
 
 Router.init();
