@@ -130,7 +130,7 @@ export class ModernApiCard
   async disconnectedCallback() {
     try {
       if (this.form) {
-        const unsubscribe = this.form.subscribeToValue(() => { });
+        const unsubscribe = this.form.subscribeToValue(() => {});
         if (typeof unsubscribe === "function") {
           unsubscribe();
         }
@@ -561,10 +561,11 @@ export class ModernApiCard
                   tooltip="Enter your full name"
                   tooltip-position="top"
                 >
-                ${nameErrors.length > 0
-          ? `<div class="error">${nameErrors[0]}</div>`
-          : ""
-        }
+                ${
+                  nameErrors.length > 0
+                    ? `<div class="error">${nameErrors[0]}</div>`
+                    : ""
+                }
               </div>
               
               <div class="form-group">
@@ -577,10 +578,11 @@ export class ModernApiCard
                   tooltip="Enter a valid email address"
                   tooltip-position="bottom"
                 >
-                ${emailErrors.length > 0
-          ? `<div class="error">${emailErrors[0]}</div>`
-          : ""
-        }
+                ${
+                  emailErrors.length > 0
+                    ? `<div class="error">${emailErrors[0]}</div>`
+                    : ""
+                }
               </div>
               
               <div class="form-actions">
