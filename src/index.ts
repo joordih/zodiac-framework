@@ -13,19 +13,16 @@ import "./test/services/api-data.test.ts";
 import "./test/services/theme-service.ts";
 
 console.log("🚀 Zodiac Framework is initializing main instances...");
-
 await SauceContainer.autoRegister();
 console.log("✅ Services initialized");
 
-// load components using Promise block and await
 await Promise.all([
   import("./test/components/dashboard/overview.ts"),
   import("./test/components/api-card.test.ts"),
   import("./test/components/admin-panel.ts"),
   import("./test/components/dashboard.ts"),
-]).then(() => {
-  console.log("✅ Components loaded");
-});
+  import("./test/components/work-dashboard.ts"),
+]);
 
 Router.init();
 console.log("✅ Router initialized");

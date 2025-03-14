@@ -4,7 +4,7 @@ import {
   useEffect,
   useMemo,
   useService,
-  useState
+  useState,
 } from "../../core/component/hooks/index.ts";
 import { ZodiacComponent } from "../../core/component/zodiacComponent.ts";
 import { DirectiveManager } from "../../core/directives/directive-manager.ts";
@@ -40,12 +40,15 @@ export class AdminPanel
   private sidebarCollapsed: boolean = false;
 
   @State()
-  private activeMenuItem: string = "dashboard";
+  private activeMenuItem: string = "overview";
 
   @Inject("theme-service")
   private themeService!: ThemeService;
 
+  @Inject("directive-manager")
   private directiveManager!: DirectiveManager;
+
+  @Inject("typed-router-service")
   private routerService!: TypedRouterService;
 
   emit!: <K extends keyof AdminEvents>(event: K, data: AdminEvents[K]) => void;
@@ -105,19 +108,25 @@ export class AdminPanel
         () => {
           const currentTheme = this.themeService.getTheme();
           const effectiveTheme = this.themeService.getEffectiveTheme();
-          console.log(`AdminPanel: Initial theme is ${currentTheme}, effective theme is ${effectiveTheme}`);
-          
+          console.log(
+            `AdminPanel: Initial theme is ${currentTheme}, effective theme is ${effectiveTheme}`
+          );
+
           if (effectiveTheme === "dark") {
             document.documentElement.classList.add("dark");
           } else {
             document.documentElement.classList.remove("dark");
           }
-          
-          const unsubscribe = this.themeService.subscribe((theme, effectiveTheme) => {
-            console.log(`AdminPanel: Theme changed to ${theme}, effective theme is ${effectiveTheme}`);
-            this.render();
-          });
-          
+
+          const unsubscribe = this.themeService.subscribe(
+            (theme, effectiveTheme) => {
+              console.log(
+                `AdminPanel: Theme changed to ${theme}, effective theme is ${effectiveTheme}`
+              );
+              this.render();
+            }
+          );
+
           return () => {
             unsubscribe();
           };
@@ -147,8 +156,6 @@ export class AdminPanel
     }
   }
 
-
-
   private setupDirectives() {
     try {
       if (!this.directiveManager) {
@@ -165,6 +172,11 @@ export class AdminPanel
         this.root.querySelectorAll("[click-outside]");
       if (clickOutsideElements.length > 0) {
         this.directiveManager.applyDirectives(clickOutsideElements);
+      }
+
+      const lazyLoadElements = this.root.querySelectorAll("[lazy-load]");
+      if (lazyLoadElements.length > 0) {
+        this.directiveManager.applyDirectives(lazyLoadElements);
       }
     } catch (error) {
       console.error("Error setting up directives:", error);
@@ -187,21 +199,23 @@ export class AdminPanel
     this.themeService.toggleTheme();
     const newTheme = this.themeService.getTheme();
     const effectiveTheme = this.themeService.getEffectiveTheme();
-    
-    console.log(`Theme toggled to: ${newTheme}, effective theme: ${effectiveTheme}`);
-    
+
+    console.log(
+      `Theme toggled to: ${newTheme}, effective theme: ${effectiveTheme}`
+    );
+
     if (effectiveTheme === "dark") {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
-    
+
     if (effectiveTheme === "dark") {
       (this.root as ShadowRoot).host.classList.add("dark");
     } else {
       (this.root as ShadowRoot).host.classList.remove("dark");
     }
-    
+
     this.emit("theme-change", newTheme);
     this.render();
   }
@@ -216,14 +230,25 @@ export class AdminPanel
       if (menuId) {
         this.activeMenuItem = menuId;
         this.emit("menu-select", menuId);
-        
+
         if (window.innerWidth < 768) {
           this.sidebarCollapsed = true;
         }
-        
+
         this.render();
       }
     }
+  }
+
+  private getTabContent(tabName: string): string {
+    const componentName = tabName.toLowerCase();
+    return /* html */ `
+      <div 
+        lazy-load 
+        src-lazy="@/test/components/dashboard/${componentName}.ts"
+      >
+        <${componentName}-component data-component="${componentName}-component"></${componentName}-component>
+      </div>`;
   }
 
   @Render()
@@ -246,25 +271,51 @@ export class AdminPanel
       );
 
       const menuItems = [
-        { id: "dashboard", label: "Dashboard", icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>` },
-        { id: "users", label: "Users", icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>` },
-        { id: "settings", label: "Settings", icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>` },
-        { id: "analytics", label: "Analytics", icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-4 4"/></svg>` },
-        { id: "content", label: "Content", icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>` }
+        {
+          id: "overview",
+          label: "Overview",
+          icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>`,
+        },
+        {
+          id: "users",
+          label: "Users",
+          icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+        },
+        {
+          id: "settings",
+          label: "Settings",
+          icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
+        },
+        {
+          id: "analytics",
+          label: "Analytics",
+          icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-4 4"/></svg>`,
+        },
+        {
+          id: "content",
+          label: "Content",
+          icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`,
+        },
       ];
 
-      const menuHTML = menuItems.map(item => {
-        const isActive = this.activeMenuItem === item.id;
-        return `
-          <div class="menu-item ${isActive ? 'active' : ''}" data-id="${item.id}">
+      const menuHTML = menuItems
+        .map((item) => {
+          const isActive = this.activeMenuItem === item.id;
+          return `
+          <div class="menu-item ${isActive ? "active" : ""}" data-id="${
+            item.id
+          }">
             <div class="menu-icon">${item.icon}</div>
             <span class="menu-label">${item.label}</span>
           </div>
         `;
-      }).join('');
+        })
+        .join("");
 
-      return this.root.innerHTML = /* html */`
-        <div class="admin-panel ${this.sidebarCollapsed ? 'sidebar-collapsed' : ''}">
+      return (this.root.innerHTML = /* html */ `
+        <div class="admin-panel ${
+          this.sidebarCollapsed ? "sidebar-collapsed" : ""
+        }">
           <style>
             .admin-panel {
               --background: hsl(0, 0%, 100%);
@@ -287,6 +338,9 @@ export class AdminPanel
               --input: hsl(240, 5.9%, 90%);
               --ring: hsl(240, 5.9%, 10%);
               --radius: 0.5rem;
+              --chart-bars: hsl(240, 10%, 3.9%);
+              --chart-bars-accent: hsl(240, 8.30%, 14.10%);
+              --text-color: hsl(240, 10%, 3.9%);
               
               display: grid;
               grid-template-columns: auto 1fr;
@@ -325,6 +379,13 @@ export class AdminPanel
               --border: hsl(240, 3.7%, 15.9%);
               --input: hsl(240, 3.7%, 15.9%);
               --ring: hsl(240, 4.9%, 83.9%);
+              --text-color: hsl(0, 0%, 98%);
+              --bg-color: hsl(240, 10%, 3.9%);
+              --card-bg: hsl(240, 10%, 3.9%);
+              --border-color: hsl(240, 10%, 10%);
+              --muted-color: hsl(240, 5%, 64.9%);
+              --primary-color: hsl(142.1, 76.2%, 36.3%);
+              --chart-bars: hsl(0, 0%, 98%);
             }
             
             *, *::before, *::after {
@@ -537,16 +598,24 @@ export class AdminPanel
           
           <div class="main-content">
             <div class="header">
-              <h1 class="page-title">${this.activeMenuItem.charAt(0).toUpperCase() + this.activeMenuItem.slice(1)}</h1>
+              <h1 class="page-title">${
+                this.activeMenuItem.charAt(0).toUpperCase() +
+                this.activeMenuItem.slice(1)
+              }</h1>
               <div class="header-actions">
                 <button id="theme-toggle" class="theme-toggle">
                   ${themeIcon}
                 </button>
               </div>
             </div>
+
+            <div class="tab-content">
+              ${this.getTabContent(this.activeMenuItem)}
+            </div>
             
-            <div class="content-grid">
-              <div class="card">
+            <!-- <div class="content-grid"> -->
+
+              <!-- <div class="card">
                 <div class="card-header">
                   <h2 class="card-title">Welcome to Zodiac Admin</h2>
                 </div>
@@ -578,12 +647,12 @@ export class AdminPanel
                 </div>
               </div>
             </div>
-          </div>
+          </div> -->
         </div>
-      `;
+      `);
     } catch (error: any) {
       console.error("Error in render:", error);
-      return this.root.innerHTML = `<div>Error rendering component: ${error.message}</div>`;
+      return (this.root.innerHTML = `<div>Error rendering component: ${error.message}</div>`);
     }
   }
 }

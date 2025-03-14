@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../../zodiac-framework"
+		},
+		{
+			"name": "zodiac-framework: development",
+			"path": "../development"
+		},
+		{
+			"name": "zodiac-framework: neqw",
+			"path": "."
+		}
+	],
+	"settings": {}
+}

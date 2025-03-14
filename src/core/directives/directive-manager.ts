@@ -40,7 +40,7 @@ export class DirectiveManager implements IService {
   async onDestroy(): Promise<void> {
     this.mutationObserver.disconnect();
 
-    for (const [element, instances] of this.directiveInstances.entries()) {
+    for (const [_element, instances] of this.directiveInstances.entries()) {
       for (const instance of instances) {
         this.destroyDirective(instance);
       }

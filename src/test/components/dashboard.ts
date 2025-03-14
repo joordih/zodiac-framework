@@ -29,23 +29,24 @@ export interface DashboardEvents {
 @TypedEvents<DashboardEvents>()
 export class DashboardComponent
   extends BaseComponent
-  implements TypedEventComponent<DashboardEvents> {
+  implements TypedEventComponent<DashboardEvents>
+{
   @State()
   private dateRange: {
     startDate: string;
     endDate: string;
   } = {
-      startDate: "Jan 20, 2023",
-      endDate: "Feb 09, 2023",
-    };
+    startDate: "Jan 20, 2023",
+    endDate: "Feb 09, 2023",
+  };
 
   @Inject("theme-service")
   private themeService!: ThemeService;
 
-  @Inject('typed-router-service')
+  @Inject("typed-router-service")
   private routerService!: TypedRouterService;
 
-  @Inject('directive-manager')
+  @Inject("directive-manager")
   private directiveManager!: DirectiveManager;
 
   emit!: <K extends keyof DashboardEvents>(
@@ -89,7 +90,7 @@ export class DashboardComponent
         () => {
           console.log("Dashboard component mounted");
           if (this.themeService) {
-            const theme = this.themeService.getTheme();
+            const _theme = this.themeService.getTheme();
             const effectiveTheme = this.themeService.getEffectiveTheme();
             document.documentElement.classList.toggle(
               "dark",
@@ -173,7 +174,7 @@ export class DashboardComponent
 
   @Render()
   render() {
-    return this.root.innerHTML = /* html */ `
+    return (this.root.innerHTML = /* html */ `
       <div class="dashboard-root">
         <style>
           :host {
@@ -198,16 +199,39 @@ export class DashboardComponent
           }
 
           .dashboard {
-            padding: 1.5rem;
+            padding: 1rem;
             max-width: 1200px;
             margin: 0 auto;
           }
 
           .dashboard-header {
             display: flex;
+            flex-direction: row;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1.5rem;
+            gap: 1rem;
+          }
+
+          @media (max-width: 640px) {
+            .dashboard {
+              padding: 0.75rem;
+            }
+
+            .dashboard-header {
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 0.75rem;
+            }
+
+            .dashboard-title {
+              font-size: 1.25rem;
+            }
+
+            .date-range {
+              width: 100%;
+              justify-content: space-between;
+            }
           }
 
           .dashboard-title {
@@ -270,8 +294,9 @@ export class DashboardComponent
 
             <div class="date-range">
               <div class="date-range-selector">
-                <span>${this.dateRange.startDate} - ${this.dateRange.endDate
-      }</span>
+                <span>${this.dateRange.startDate} - ${
+      this.dateRange.endDate
+    }</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
               </div>
 
@@ -279,19 +304,23 @@ export class DashboardComponent
             </div>
           </div>
           <div class="tabs">
-            <div class="tab ${this.activeTab === "overview" ? "active" : ""
-      }">Overview</div>
-            <div class="tab ${this.activeTab === "analytics" ? "active" : ""
-      }">Analytics</div>
-            <div class="tab ${this.activeTab === "reports" ? "active" : ""
-      }">Reports</div>
-            <div class="tab ${this.activeTab === "notifications" ? "active" : ""
-      }">Notifications</div>
+            <div class="tab ${
+              this.activeTab === "overview" ? "active" : ""
+            }">Overview</div>
+            <div class="tab ${
+              this.activeTab === "analytics" ? "active" : ""
+            }">Analytics</div>
+            <div class="tab ${
+              this.activeTab === "reports" ? "active" : ""
+            }">Reports</div>
+            <div class="tab ${
+              this.activeTab === "notifications" ? "active" : ""
+            }">Notifications</div>
           </div>
           <div class="tab-content">
           ${this.getTabContent(this.activeTab)}
         </div>
       </div>
-    `;
+    `);
   }
 }
