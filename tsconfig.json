@@ -11,19 +11,24 @@
     "isolatedModules": true,
     "noEmit": true,
     "strict": true,
+    "declaration": true,
     "noUnusedLocals": true,
+    "outDir": "./dist",
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "esModuleInterop": true,
 		"jsx": "react",
-		"jsxFactory": "DecoElement.h",
+		"jsxFactory": "DecoElement.h",  
 		"jsxFragmentFactory": "DecoElement.Fragment",
 		"experimentalDecorators": true,
+    "forceConsistentCasingInFileNames": true,
 		"emitDecoratorMetadata": true,
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@/component/*": ["src/component/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

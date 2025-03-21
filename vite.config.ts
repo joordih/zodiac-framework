@@ -20,7 +20,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@core": path.resolve(__dirname, "./src/core/"),
-      "@components": path.resolve(__dirname, "./src/components"),
+      "@/component": path.resolve(__dirname, "./src/component"),
       "@polyfills": path.resolve(__dirname, "./src/core/polyfills/index.ts"),
       "process": path.resolve(__dirname, "./src/core/polyfills/process.ts"),
       "perf_hooks": path.resolve(__dirname, "./src/core/polyfills/performance.ts"),

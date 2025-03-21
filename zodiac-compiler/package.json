@@ -1,0 +1,29 @@
+{
+  "name": "zodiac-compiler",
+  "version": "1.0.0",
+  "description": "Custom compiler for Zodiac Framework",
+  "main": "dist/index.js",
+  "bin": {
+    "zodiac-compiler": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "start": "node dist/cli/index.js"
+  },
+  "keywords": [
+    "compiler",
+    "minification",
+    "lazy-loading"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "glob": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.0.0",
+    "@types/node": "^20.0.0"
+  }
+}

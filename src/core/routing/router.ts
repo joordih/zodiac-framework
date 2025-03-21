@@ -14,6 +14,14 @@ export class Router {
   private static routerViewElement: Element | null = null;
   private static initialized = false;
 
+  protected getRouteConfig(route: string): RouteDefinition {
+    const config = Router.routes.get(route);
+    if (!config) {
+      throw new Error(`No route configuration found for: ${route}`);
+    }
+    return config;
+  }
+
   static register(
     path: string,
     component: string,

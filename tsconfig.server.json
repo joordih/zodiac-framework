@@ -14,7 +14,7 @@
     "forceConsistentCasingInFileNames": true,
     "jsx": "react",
     "jsxFactory": "h",
-    "jsxFragmentFactory": "Fragment"
+    "jsxFragmentFactory": "Fragment",
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

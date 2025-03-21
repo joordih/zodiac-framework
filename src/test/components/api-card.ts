@@ -29,7 +29,7 @@ import {
   MinLength,
   Required,
 } from "../../core/validation/validators.ts";
-import { ApiService } from "../services/api-data.test.ts";
+import { ApiService } from "../services/api-data.ts";
 
 class UserFormModel {
   @Required
