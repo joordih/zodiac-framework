@@ -1,4 +1,5 @@
-import { SauceContainer } from "@core/injection/sauceContainer.ts";
+import { HTMLElement } from "../polyfills/dom.ts";
+import { SauceContainer } from "@/core/injection/sauceContainer.ts";
 
 export class BaseComponent extends HTMLElement {
   protected root: ShadowRoot | this;

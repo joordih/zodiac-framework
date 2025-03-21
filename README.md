@@ -2,7 +2,7 @@
 
 > ⚠️ **Nota**: Este framework está actualmente en fase de desarrollo activo. Las características y la API pueden cambiar.
 
-Un framework moderno y tipado para crear Web Components con inyección de dependencias, gestión de estado, formularios reactivos, eventos tipados, routing y más.
+Un framework moderno y tipado para crear Web Components con inyección de dependencias, gestión de estado, formularios reactivos, eventos tipados, routing, SSR y más.
 
 ## Características principales
 
@@ -16,183 +16,242 @@ Un framework moderno y tipado para crear Web Components con inyección de depend
 - 🎨 **Sistema de directivas personalizadas**
 - 🔌 **Carga diferida de componentes**
 - ⚡ **Middleware para componentes**
+- 🖥️ **Server Side Rendering (SSR)**
+- 🎭 **Sistema de estados global**
 
-## Ejemplos de uso
+## Ejemplos de uso detallados
 
-### Eventos Tipados
-
-```typescript
-// Definir los tipos de eventos
-interface AppEvents {
-  "user-submit": UserFormModel;
-  "form-reset": void;
-}
-
-// Usar el decorador TypedEvents
-@ZodiacComponent("modern-api-card")
-@TypedEvents<AppEvents>()
-export class ModernApiCard
-  extends BaseComponent
-  implements TypedEventComponent<AppEvents>
-{
-  // Los métodos emit, on, once y off se añaden automáticamente
-  emit!: <K extends keyof AppEvents>(event: K, data: AppEvents[K]) => void;
-
-  handleSubmit(e: Event) {
-    e.preventDefault();
-    if (this.form.isValid()) {
-      this.emit("user-submit", this.form.getValue());
-    }
-  }
-}
-```
-
-### Formularios Reactivos
+### Gestión de Estado Global
 
 ```typescript
-// Modelo con validadores
-class UserFormModel {
-  @Required
-  @MinLength(3)
-  name: string = "";
-
-  @Required
-  @Email
-  email: string = "";
+// Definición del estado global
+interface GlobalState {
+  user: {
+    name: string;
+    isAuthenticated: boolean;
+  };
+  theme: 'light' | 'dark';
 }
 
-// Formulario reactivo
-export class ModernApiCard extends BaseComponent {
-  private setupForm() {
-    const nameControl = new FormControl<string>("", {
-      validators: [
-        (value) => (!value ? "Name is required" : null),
-        (value) =>
-          value.length < 3 ? "Name must be at least 3 characters" : null,
-      ],
-    });
+// Uso en componentes
+@ZodiacComponent("app-header")
+export class AppHeader extends BaseComponent {
+  private stateManager = StateManager.getInstance();
 
-    this.form = new FormGroup<UserFormModel>({
-      name: nameControl,
-      email: new FormControl(""),
-    });
-
-    // Suscripción a cambios
-    this.form.subscribeToValue((value) => {
-      console.log("Form value changed:", value);
-    });
-  }
-}
-```
-
-### Hooks del Sistema
-
-```typescript
-export class ModernApiCard extends BaseComponent {
   async connectedCallback() {
     await super.connectedCallback();
-
-    // Estado local con useState
-    const [tooltipVisible, setTooltipVisible] = useState(this, false);
-
-    // Efectos con useEffect
-    useEffect(
-      this,
-      () => {
-        console.log("Component mounted");
-        return () => console.log("Cleanup");
-      },
-      {}
-    );
-
-    // Valores memorizados
-    const memoizedValue = useMemo(
-      this,
-      () => {
-        return `Memoized count: ${this.count * 2}`;
-      },
-      [this.count]
-    );
-
-    // Callbacks memorizados
-    const handleClick = useCallback(
-      this,
-      () => {
-        console.log("Callback clicked with count:", this.count);
-      },
-      [this.count]
-    );
-
-    // Inyección de servicios con useService
-    this.routerService = useService(this, "typed-router-service");
+    
+    // Suscripción a cambios específicos
+    this.stateManager.attach(new class extends AbstractObserver {
+      update(data: { key: string; newValue: any }) {
+        if (data.key === 'theme') {
+          this.updateTheme(data.newValue);
+        }
+      }
+    }(this.stateManager));
+    
+    // Actualizar estado
+    this.stateManager.set('theme', 'dark');
   }
 }
 ```
 
-### Sistema de Directivas
+### Sistema de Formularios Avanzado
 
 ```typescript
-export class ModernApiCard extends BaseComponent {
-  private setupDirectives() {
-    // Aplicar directivas a elementos
-    const tooltipElements = this.root.querySelectorAll("[tooltip]");
-    const clickOutsideElements = this.root.querySelectorAll("[click-outside]");
-    const lazyLoadElements = this.root.querySelectorAll("[lazy-load]");
+// Modelo de formulario con validación avanzada
+class RegistrationForm {
+  @Required()
+  @MinLength(3)
+  username: string = "";
 
-    this.directiveManager.applyDirectives([
-      ...tooltipElements,
-      ...clickOutsideElements,
-      ...lazyLoadElements,
-    ]);
+  @Required()
+  @Email()
+  email: string = "";
+
+  @Required()
+  @Pattern(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/)
+  password: string = "";
+
+  @Custom((value, form) => value === form.get('password').value)
+  confirmPassword: string = "";
+}
+
+// Implementación en componente
+@ZodiacComponent("registration-form")
+export class RegistrationFormComponent extends BaseComponent {
+  private form!: FormGroup<RegistrationForm>;
+
+  async connectedCallback() {
+    await super.connectedCallback();
+    this.setupForm();
   }
 
-  // Uso en el template
+  private setupForm() {
+    this.form = new FormGroup<RegistrationForm>({
+      username: new FormControl(""),
+      email: new FormControl(""),
+      password: new FormControl(""),
+      confirmPassword: new FormControl("")
+    });
+
+    // Validación asíncrona
+    this.form.getControl("username").setAsyncValidator(async (value) => {
+      const response = await fetch(`/api/check-username/${value}`);
+      const isAvailable = await response.json();
+      return isAvailable ? null : "Username already taken";
+    });
+
+    // Suscripción a cambios de estado
+    this.form.subscribeToStatus((status) => {
+      const submitButton = this.root.querySelector('button[type="submit"]');
+      if (submitButton) {
+        submitButton.disabled = status !== 'VALID';
+      }
+    });
+  }
+}
+```
+
+### Server Side Rendering (SSR)
+
+```typescript
+// Componente con soporte SSR
+@ZodiacComponent("product-card")
+@SSREnabled()
+export class ProductCard extends BaseComponent {
+  @State()
+  private product: Product | null = null;
+
+  async connectedCallback() {
+    await super.connectedCallback();
+    
+    if (isSSR()) {
+      // Fetch datos durante SSR
+      this.product = await this.fetchProductData();
+    } else {
+      // Hidratación en cliente
+      this.hydrateFromSSRData();
+    }
+  }
+
+  private async fetchProductData(): Promise<Product> {
+    // Implementación de fetch para SSR
+    return await fetch('/api/product/1').then(r => r.json());
+  }
+
+  @Render()
+  render() {
+    if (!this.product) return '<div>Loading...</div>';
+
+    return /* html */ `
+      <div class="product-card" data-ssr-id="${this.product.id}">
+        <h2>${this.product.name}</h2>
+        <p>${this.product.description}</p>
+        <span class="price">${this.product.price}</span>
+      </div>
+    `;
+  }
+}
+
+// Configuración del servidor SSR
+import { SSREngine, SSRMiddleware } from 'zodiac-framework/ssr';
+
+const ssrEngine = new SSREngine({
+  components: [ProductCard],
+  polyfills: true,
+  middleware: [
+    new SSRMiddleware({
+      cache: true,
+      timeout: 5000
+    })
+  ]
+});
+
+// Express middleware ejemplo
+app.use(async (req, res, next) => {
+  try {
+    const html = await ssrEngine.renderToString(`
+      <product-card data-ssr="true"></product-card>
+    `);
+    res.send(html);
+  } catch (error) {
+    next(error);
+  }
+});
+```
+
+### Sistema de Directivas Avanzado
+
+```typescript
+// Directiva personalizada
+@Directive({
+  selector: "[tooltip]",
+  observedAttributes: ["tooltip", "tooltip-position"]
+})
+export class TooltipDirective implements DirectiveLifecycle {
+  private tooltipElement?: HTMLElement;
+  private position: 'top' | 'bottom' | 'left' | 'right' = 'top';
+
+  onInit(element: HTMLElement): void {
+    this.setupTooltip(element);
+  }
+
+  onAttributeChanged(name: string, oldValue: string, newValue: string): void {
+    if (name === 'tooltip-position') {
+      this.position = newValue as any;
+      this.updatePosition();
+    }
+  }
+
+  private setupTooltip(element: HTMLElement): void {
+    this.tooltipElement = document.createElement('div');
+    this.tooltipElement.classList.add('zodiac-tooltip');
+    // Implementación del tooltip
+  }
+}
+
+// Uso en componente
+@ZodiacComponent("feature-component")
+export class FeatureComponent extends BaseComponent {
+  @Render()
   render() {
     return /* html */ `
-      <input 
-        tooltip="Enter your full name"
+      <button 
+        tooltip="Característica premium"
         tooltip-position="top"
-        click-outside
-        lazy-load
-      >
+        class="feature-button">
+        Activar
+      </button>
     `;
   }
 }
 ```
 
-### Servicios con Ámbito
+### Middleware para Componentes
 
 ```typescript
-@Injectable()
-@ServiceData({
-  token: "api-service",
-  scope: InjectionScope.SINGLETON,
-})
-@Configurable({ baseUrl: "http://localhost:8080/" })
-export class ApiService implements IService {
-  private config!: { baseUrl: string };
-
-  async onInit(): Promise<void> {
-    // Inicialización asíncrona
-  }
-
-  async onDestroy(): Promise<void> {
-    // Limpieza de recursos
+// Middleware de autenticación
+export class AuthMiddleware implements ComponentMiddleware {
+  async beforeMount(component: BaseComponent): Promise<boolean> {
+    const authService = useService(component, 'auth-service');
+    const isAuthenticated = await authService.checkAuth();
+    
+    if (!isAuthenticated) {
+      const router = useService(component, 'router-service');
+      router.navigate('/login');
+      return false;
+    }
+    
+    return true;
   }
 }
-```
 
-### Router Tipado
-
-```typescript
-@Route("/modern-api")
-export class ModernApiCard extends BaseComponent {
-  constructor() {
-    super(true);
-    this.routerService.navigate("/modern-api", {
-      params: { id: "123" },
-    });
-  }
+// Uso en componente
+@ZodiacComponent("protected-component")
+@UseMiddleware(AuthMiddleware)
+export class ProtectedComponent extends BaseComponent {
+  // Componente protegido
 }
 ```
 

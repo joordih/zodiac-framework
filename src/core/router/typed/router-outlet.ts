@@ -12,12 +12,12 @@ export class RouterOutlet extends BaseComponent implements IRouterOutlet {
   async connectedCallback() {
     await super.connectedCallback();
     
-    // Initialize the root element if not already done
+    
     if (!this.root) {
       this.root = this.shadowRoot || this.attachShadow({ mode: 'open' });
     }
     
-    // Register this outlet with the router service
+    
     if (this.routerService) {
       this.routerService.registerOutlet(this);
     } else {
@@ -25,18 +25,18 @@ export class RouterOutlet extends BaseComponent implements IRouterOutlet {
     }
   }
   
-  // Method to render the routed component
+  
   renderComponent(component: HTMLElement) {
     if (!this.root) {
       this.root = this.shadowRoot || this.attachShadow({ mode: 'open' });
     }
     
-    // Clear current content
+    
     while (this.root.firstChild) {
       this.root.removeChild(this.root.firstChild);
     }
     
-    // Append the new component
+    
     this.root.appendChild(component);
   }
 }

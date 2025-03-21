@@ -1,6 +1,7 @@
 import { BaseComponent } from "@/core/component/baseComponent.ts";
 import { useEffect, useService } from "@/core/component/hooks/index.ts";
 import { ZodiacComponent } from "@/core/component/zodiacComponent.ts";
+import { DirectiveManager } from "@/core/directives/directive-manager.ts";
 import { EventHandler } from "@/core/events/eventHandler.ts";
 import { TypedEventComponent } from "@/core/events/typed/typed-event-component.ts";
 import { TypedEvents } from "@/core/events/typed/typed-event-decorator.ts";
@@ -11,7 +12,53 @@ import { TypedRouterService } from "@/core/router/typed/router-service.ts";
 import { Route } from "@/core/routing/route.ts";
 import { State } from "@/core/states/state.ts";
 import { ThemeService } from "../services/theme-service.ts";
-import { DirectiveManager } from "@/core/directives/directive-manager.ts";
+
+
+interface GlobalWithDOM {
+  Element?: any;
+  HTMLElement?: any;
+  Document?: any;
+  document?: any;
+  [key: string]: any;
+}
+
+const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+const globalObj = (typeof global !== 'undefined' ? global : 
+                 typeof window !== 'undefined' ? window : 
+                 typeof globalThis !== 'undefined' ? globalThis : {}) as GlobalWithDOM;
+
+
+if (!isBrowser) {
+  
+  class Element {
+    
+  }
+  
+  class HTMLElement extends Element {
+    
+    public tagName: string = '';
+  }
+  
+  class Document extends Element {
+    createElement(tagName: string): HTMLElement {
+      const element = new HTMLElement();
+      element.tagName = tagName.toUpperCase();
+      return element;
+    }
+    
+  }
+  
+  
+  globalObj.Element = Element;
+  globalObj.HTMLElement = HTMLElement;
+  globalObj.Document = Document;
+  globalObj.document = new Document();
+} 
+
+
+export const Element = globalObj.Element;
+export const HTMLElement = globalObj.HTMLElement;
+export const Document = globalObj.Document;
 
 export interface DashboardEvents {
   "date-range-change": {
@@ -23,52 +70,46 @@ export interface DashboardEvents {
   };
 }
 
+interface Tab {
+  name: string;
+  label: string;
+}
+
+const TABS: Tab[] = [
+  { name: "overview", label: "Overview" },
+  { name: "analytics", label: "Analytics" },
+  { name: "reports", label: "Reports" },
+  { name: "notifications", label: "Notifications" }
+];
+
 @ZodiacComponent("dashboard-component")
 @Injectable()
 @Route("/dashboard")
 @TypedEvents<DashboardEvents>()
-export class DashboardComponent
-  extends BaseComponent
-  implements TypedEventComponent<DashboardEvents>
-{
+export class DashboardComponent extends BaseComponent implements TypedEventComponent<DashboardEvents> {
   @State()
-  private dateRange: {
-    startDate: string;
-    endDate: string;
-  } = {
+  private dateRange = {
     startDate: "Jan 20, 2023",
-    endDate: "Feb 09, 2023",
+    endDate: "Feb 09, 2023"
   };
+
+  @State()
+  private activeTab: string = "overview";
 
   @Inject("theme-service")
   private themeService!: ThemeService;
 
   @Inject("typed-router-service")
+  // @ts-ignore
   private routerService!: TypedRouterService;
 
   @Inject("directive-manager")
   private directiveManager!: DirectiveManager;
 
-  emit!: <K extends keyof DashboardEvents>(
-    event: K,
-    data: DashboardEvents[K]
-  ) => void;
-  on!: <K extends keyof DashboardEvents>(
-    event: K,
-    listener: (data: DashboardEvents[K]) => void
-  ) => {
-    unsubscribe: () => void;
-  };
-  once!: <K extends keyof DashboardEvents>(
-    event: K,
-    listener: (data: DashboardEvents[K]) => void
-  ) => {
-    unsubscribe: () => void;
-  };
-  off!: <K extends keyof DashboardEvents>(
-    event: K,
-    listener: (data: DashboardEvents[K]) => void
-  ) => void;
+  emit!: <K extends keyof DashboardEvents>(event: K, data: DashboardEvents[K]) => void;
+  on!: <K extends keyof DashboardEvents>(event: K, listener: (data: DashboardEvents[K]) => void) => { unsubscribe: () => void };
+  once!: <K extends keyof DashboardEvents>(event: K, listener: (data: DashboardEvents[K]) => void) => { unsubscribe: () => void };
+  off!: <K extends keyof DashboardEvents>(event: K, listener: (data: DashboardEvents[K]) => void) => void;
 
   constructor() {
     super(true);
@@ -76,105 +117,114 @@ export class DashboardComponent
 
   async connectedCallback() {
     await super.connectedCallback();
+    await this.initializeComponent();
+  }
 
+  private async initializeComponent() {
     try {
-      try {
-        this.routerService = useService(this, "typed-router-service");
-        this.directiveManager = useService(this, "directive-manager");
-      } catch (error) {
-        console.warn("Service not available:", error);
+      await this.initializeServices();
+      if (isBrowser) {
+        await this.setupTheme();
       }
-
-      useEffect(
-        this,
-        () => {
-          console.log("Dashboard component mounted");
-          if (this.themeService) {
-            const _theme = this.themeService.getTheme();
-            const effectiveTheme = this.themeService.getEffectiveTheme();
-            document.documentElement.classList.toggle(
-              "dark",
-              effectiveTheme === "dark"
-            );
-
-            const unsubscribe = this.themeService.subscribe(
-              (_, effectiveTheme) => {
-                document.documentElement.classList.toggle(
-                  "dark",
-                  effectiveTheme === "dark"
-                );
-              }
-            );
-
-            return () => {
-              unsubscribe();
-              console.log("Dashboard component will unmount");
-            };
-          }
-        },
-        {}
-      );
-
-      if (!this.themeService) {
-        console.warn("Theme service not available, defaulting to light theme");
-      }
-
       this.render();
-
-      setTimeout(() => {
+      if (isBrowser) {
         this.setupDirectives();
-      }, 0);
+      }
     } catch (error) {
-      console.error("Error in dashboard connectedCallback:", error);
+      console.error("Error initializing dashboard:", error);
     }
   }
 
-  private setupDirectives() {
+  private async initializeServices() {
     try {
-      if (!this.directiveManager) {
-        console.warn("DirectiveManager not available");
-        return;
-      }
-
-      const lazyLoadElements = this.root.querySelectorAll("[lazy-load]");
-      if (lazyLoadElements.length > 0) {
-        this.directiveManager.applyDirectives(lazyLoadElements);
-      }
+      this.routerService = useService(this, "typed-router-service");
+      this.directiveManager = useService(this, "directive-manager");
     } catch (error) {
-      console.error("Error setting up directives:", error);
+      console.warn("Service initialization failed:", error);
+    }
+  }
+
+  private async setupTheme() {
+    if (!this.themeService) {
+      console.warn("Theme service not available");
+      return;
+    }
+
+    useEffect(this, () => {
+      const updateTheme = (effectiveTheme: string) => {
+        if (isBrowser) {
+          document.documentElement.classList.toggle("dark", effectiveTheme === "dark");
+        }
+      };
+
+      const effectiveTheme = this.themeService.getEffectiveTheme();
+      updateTheme(effectiveTheme);
+
+      const unsubscribe = this.themeService.subscribe((_, theme) => updateTheme(theme));
+
+      return () => unsubscribe();
+    }, {});
+  }
+
+  private setupDirectives() {
+    if (!this.directiveManager) {
+      console.warn("DirectiveManager not available");
+      return;
+    }
+
+    
+    if (typeof this.directiveManager.applyDirectives !== 'function') {
+      console.warn("DirectiveManager.applyDirectives is not a function");
+      return;
+    }
+
+    const lazyLoadElements = this.root.querySelectorAll("[lazy-load]");
+    if (lazyLoadElements.length > 0) {
+      this.directiveManager.applyDirectives(lazyLoadElements);
     }
   }
 
   @EventHandler("click", ".date-range-selector")
+  // @ts-ignore
   private handleDateRangeClick() {
     console.log("Date range selector clicked");
   }
 
-  @State()
-  private activeTab: string = "overview";
-
   @EventHandler("click", ".tab")
+  // @ts-ignore
   private handleTabClick(_e: MouseEvent, element: Element) {
-    const tabName = element.textContent?.toLocaleLowerCase() || "overview";
-    console.log("Tab clicked:", tabName);
+    const tabName = element.textContent?.toLowerCase() || "overview";
     this.activeTab = tabName;
     this.render();
   }
 
   private getTabContent(tabName: string): string {
-    const componentName = tabName.toLowerCase();
-    return /* html */ `
-      <div 
-        lazy-load 
-        src-lazy="@/test/components/dashboard/${componentName}.ts"
-      >
+    
+    const safeTabName = typeof tabName === 'string' ? tabName : "overview";
+    const componentName = safeTabName.toLowerCase();
+    
+    if (isBrowser) {
+      return `<div lazy-load src-lazy="@/test/components/dashboard/${componentName}.tsx">
         <${componentName}-component data-component="${componentName}-component"></${componentName}-component>
       </div>`;
+    } else {
+      return `<div class="tab-placeholder">
+        <p>Loading ${componentName} content...</p>
+      </div>`;
+    }
   }
 
   @Render()
   render() {
-    return (this.root.innerHTML = /* html */ `
+    
+    const safeActiveTab = typeof this.activeTab === 'string' ? this.activeTab : "overview";
+    const safeDateRange = this.dateRange || {
+      startDate: "Jan 20, 2023",
+      endDate: "Feb 09, 2023"
+    };
+    
+    
+    const template = `
       <div class="dashboard-root">
         <style>
           :host {
@@ -182,7 +232,6 @@ export class DashboardComponent
             font-family: system-ui, -apple-system, sans-serif;
             color: var(--text-color);
             background-color: var(--bg-color);
-
             --chart-bars: hsl(240, 10%, 3.9%);
             --chart-bars-accent: hsl(240, 8.30%, 14.10%);
             --text-color: hsl(240, 10%, 3.9%);
@@ -286,41 +335,47 @@ export class DashboardComponent
             color: var(--text-color);
             border-bottom: 2px solid var(--text-color);
           }
+
+          .tab-placeholder {
+            padding: 2rem;
+            text-align: center;
+            color: var(--muted-color);
+          }
         </style>
 
         <div class="dashboard">
           <div class="dashboard-header">
             <h1 class="dashboard-title">Dashboard</h1>
-
             <div class="date-range">
               <div class="date-range-selector">
-                <span>${this.dateRange.startDate} - ${
-      this.dateRange.endDate
-    }</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                <span>${safeDateRange ? `${safeDateRange.startDate} - ${safeDateRange.endDate}` : 'No date range'}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
               </div>
-
               <button class="download-btn">Download</button>
             </div>
           </div>
+
           <div class="tabs">
-            <div class="tab ${
-              this.activeTab === "overview" ? "active" : ""
-            }">Overview</div>
-            <div class="tab ${
-              this.activeTab === "analytics" ? "active" : ""
-            }">Analytics</div>
-            <div class="tab ${
-              this.activeTab === "reports" ? "active" : ""
-            }">Reports</div>
-            <div class="tab ${
-              this.activeTab === "notifications" ? "active" : ""
-            }">Notifications</div>
+            ${TABS.map(tab => `
+              <div class="tab ${safeActiveTab === tab.name ? 'active' : ''}">${tab.label}</div>
+            `).join('')}
           </div>
+
           <div class="tab-content">
-          ${this.getTabContent(this.activeTab)}
+            ${this.getTabContent(safeActiveTab)}
+          </div>
         </div>
       </div>
-    `);
+    `;
+    
+    
+    if (this.shadowRoot) {
+      this.shadowRoot.innerHTML = template;
+    }
+    
+    
+    return template;
   }
-}
+} 

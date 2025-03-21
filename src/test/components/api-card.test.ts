@@ -58,6 +58,7 @@ export class ModernApiCard
   private count: number = 0;
 
   @Event("counter-changed")
+  // @ts-ignore
   private counterChange!: (detail: { count: number }) => void;
 
   @Inject("api-service")
@@ -65,7 +66,9 @@ export class ModernApiCard
 
   private form!: FormGroup<UserFormModel>;
   private directiveManager!: DirectiveManager;
+  // @ts-ignore
   private routerService!: TypedRouterService;
+  // @ts-ignore
   private showTooltip: boolean = false;
 
   emit!: <K extends keyof AppEvents>(event: K, data: AppEvents[K]) => void;
@@ -94,6 +97,7 @@ export class ModernApiCard
       this.routerService = useService(this, "typed-router-service");
       this.directiveManager = useService(this, "directive-manager");
 
+      // @ts-ignore
       const [tooltipVisible, setTooltipVisible] = useState(this, false);
       this.showTooltip = tooltipVisible;
 
@@ -215,6 +219,7 @@ export class ModernApiCard
   @EventHandler("click", "#increment")
   @LoggerMiddleware
   @ErrorBoundaryMiddleware
+  // @ts-ignore
   private handleIncrement(_e: MouseEvent) {
     this.count++;
     this.render();
@@ -223,6 +228,7 @@ export class ModernApiCard
   @EventHandler("click", "#decrement")
   @LoggerMiddleware
   @ErrorBoundaryMiddleware
+  // @ts-ignore
   private async handleDecrement(_e: MouseEvent) {
     if (!this.apiService) {
       console.error(
@@ -234,6 +240,7 @@ export class ModernApiCard
   }
 
   @EventHandler("submit", "form")
+  // @ts-ignore
   private handleSubmit(e: Event) {
     e.preventDefault();
 
@@ -247,6 +254,7 @@ export class ModernApiCard
   }
 
   @EventHandler("click", "#reset-form")
+  // @ts-ignore
   private handleReset() {
     if (this.form) {
       this.form.reset();
@@ -255,11 +263,13 @@ export class ModernApiCard
   }
 
   @EventHandler("click", "#outside-test")
+  // @ts-ignore
   private handleClickOutside() {
     console.log("Clicked outside the element!");
   }
 
   @EventHandler("input", "#name-input")
+  // @ts-ignore
   private handleNameInput(e: Event) {
     if (!this.form) return;
 
@@ -270,6 +280,7 @@ export class ModernApiCard
   }
 
   @EventHandler("input", "#email-input")
+  // @ts-ignore
   private handleEmailInput(e: Event) {
     if (!this.form) return;
 
@@ -300,6 +311,7 @@ export class ModernApiCard
         [this.count]
       );
 
+      // @ts-ignore
       const handleClick = useCallback(
         this,
         () => {

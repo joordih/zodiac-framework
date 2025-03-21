@@ -8,6 +8,8 @@ interface ThemeChangeListener {
   (theme: ThemeMode, effectiveTheme: "light" | "dark"): void;
 }
 
+const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+
 @ServiceData({
   token: "theme-service",
   scope: InjectionScope.SINGLETON,
@@ -15,20 +17,29 @@ interface ThemeChangeListener {
 export class ThemeService implements IService {
   private theme: ThemeMode = "system";
   private listeners: ThemeChangeListener[] = [];
-  private mediaQuery: MediaQueryList;
+  private mediaQuery: MediaQueryList | null = null;
+  private isSSR: boolean = !isBrowser;
 
   constructor() {
-    this.mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    this.initialize();
+    if (isBrowser) {
+      this.mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      this.initialize();
+    } else {
+      
+      console.log("ThemeService: Running in SSR mode");
+      this.theme = "light";
+    }
   }
 
   private initialize(): void {
+    if (!isBrowser) return;
+    
     const savedTheme = localStorage.getItem("zodiac-theme");
     if (savedTheme && (savedTheme === "light" || savedTheme === "dark" || savedTheme === "system")) {
       this.theme = savedTheme as ThemeMode;
     }
 
-    this.mediaQuery.addEventListener("change", this.handleSystemThemeChange.bind(this));
+    this.mediaQuery?.addEventListener("change", this.handleSystemThemeChange.bind(this));
 
     this.applyTheme();
   }
@@ -40,6 +51,8 @@ export class ThemeService implements IService {
   }
 
   private applyTheme(): void {
+    if (!isBrowser) return;
+    
     const effectiveTheme = this.getEffectiveTheme();
     
     if (effectiveTheme === "dark") {
@@ -56,8 +69,10 @@ export class ThemeService implements IService {
   }
 
   public getEffectiveTheme(): "light" | "dark" {
+    if (this.isSSR) return "light";
+    
     if (this.theme === "system") {
-      return this.mediaQuery.matches ? "dark" : "light";
+      return this.mediaQuery?.matches ? "dark" : "light";
     }
     return this.theme;
   }
@@ -65,8 +80,11 @@ export class ThemeService implements IService {
   public setTheme(theme: ThemeMode): void {
     if (this.theme !== theme) {
       this.theme = theme;
-      localStorage.setItem("zodiac-theme", theme);
-      this.applyTheme();
+      
+      if (isBrowser) {
+        localStorage.setItem("zodiac-theme", theme);
+        this.applyTheme();
+      }
     }
   }
 
@@ -102,6 +120,8 @@ export class ThemeService implements IService {
   }
 
   async unregister(): Promise<void> {
-    this.mediaQuery.removeEventListener("change", this.handleSystemThemeChange.bind(this));
+    if (isBrowser) {
+      this.mediaQuery?.removeEventListener("change", this.handleSystemThemeChange.bind(this));
+    }
   }
 }

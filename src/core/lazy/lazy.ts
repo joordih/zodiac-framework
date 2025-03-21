@@ -16,7 +16,7 @@ export function Lazy(options: LazyOptions) {
             ? document.createElement(options.loading)
             : document.createElement("div");
 
-          // fuck dynamic imports in vite
+          
           const loadPromise = import(/* @vite-ignore */ options.path)
             .then((_module) => {
               const component = Reflect.construct(

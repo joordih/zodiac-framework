@@ -7,6 +7,8 @@ import { IService } from "../services/service.ts";
 import { ServiceData } from "../services/decorator.ts";
 import { InjectionScope } from "../injection/injection-scope.ts";
 
+const isBrowser = typeof window !== 'undefined';
+
 interface DirectiveInstance {
   directive: DirectiveLifecycle;
   constructor: DirectiveConstructor;
@@ -20,9 +22,11 @@ interface DirectiveInstance {
 export class DirectiveManager implements IService {
   [x: string]: any;
   private directiveInstances: Map<HTMLElement, DirectiveInstance[]> = new Map();
-  private mutationObserver!: MutationObserver;
+  private mutationObserver: MutationObserver | null = null;
 
   async onInit(): Promise<void> {
+    if (!isBrowser) return;
+
     this.mutationObserver = new MutationObserver(
       this.handleMutations.bind(this)
     );
@@ -38,7 +42,11 @@ export class DirectiveManager implements IService {
   }
 
   async onDestroy(): Promise<void> {
-    this.mutationObserver.disconnect();
+    if (!isBrowser) return;
+
+    if (this.mutationObserver) {
+      this.mutationObserver.disconnect();
+    }
 
     for (const [_element, instances] of this.directiveInstances.entries()) {
       for (const instance of instances) {
@@ -58,6 +66,8 @@ export class DirectiveManager implements IService {
   }
 
   private processExistingElements(): void {
+    if (!isBrowser) return;
+
     const elements = document.querySelectorAll("*");
 
     for (const element of elements) {
@@ -66,6 +76,8 @@ export class DirectiveManager implements IService {
   }
 
   private handleMutations(mutations: MutationRecord[]): void {
+    if (!isBrowser) return;
+
     for (const mutation of mutations) {
       if (mutation.type === "childList") {
         for (const node of mutation.addedNodes) {
@@ -106,6 +118,8 @@ export class DirectiveManager implements IService {
   }
 
   private processElement(element: HTMLElement): void {
+    if (!isBrowser) return;
+
     for (const DirectiveClass of DIRECTIVES_REGISTRY) {
       const { selector } = DirectiveClass.definition;
 
@@ -136,6 +150,8 @@ export class DirectiveManager implements IService {
   }
 
   private handleElementRemoved(element: HTMLElement): void {
+    if (!isBrowser) return;
+
     const instances = this.directiveInstances.get(element);
 
     if (instances) {
@@ -153,6 +169,8 @@ export class DirectiveManager implements IService {
     oldValue: string | null,
     newValue: string | null
   ): void {
+    if (!isBrowser) return;
+
     const instances = this.directiveInstances.get(element);
 
     if (instances) {
@@ -169,6 +187,8 @@ export class DirectiveManager implements IService {
   }
 
   private async initDirective(instance: DirectiveInstance): Promise<void> {
+    if (!isBrowser) return;
+
     if (instance.directive.onInit) {
       await instance.directive.onInit();
     }
@@ -179,6 +199,8 @@ export class DirectiveManager implements IService {
   }
 
   private async destroyDirective(instance: DirectiveInstance): Promise<void> {
+    if (!isBrowser) return;
+
     if (instance.directive.onDestroy) {
       await instance.directive.onDestroy();
     }
@@ -188,6 +210,8 @@ export class DirectiveManager implements IService {
     element: HTMLElement,
     selector: string
   ): boolean {
+    if (!isBrowser) return false;
+
     if (selector.startsWith("[") && selector.endsWith("]")) {
       const attributeName = selector.slice(1, -1);
       return element.hasAttribute(attributeName);

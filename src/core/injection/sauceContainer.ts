@@ -44,6 +44,11 @@ export class SauceContainer {
     this.scopes.set(tokenKey, InjectionScope.SINGLETON);
   }
 
+  static isRegistered<T>(token: string | InjectionToken<T>): boolean {
+    const tokenKey = typeof token === "string" ? token : token.description;
+    return this.providers.has(tokenKey) || this.instances.has(tokenKey);
+  }
+
   static resolve<T>(token: string | InjectionToken<T>): T {
     const tokenKey = typeof token === "string" ? token : token.description;
     const scope = this.scopes.get(tokenKey) || InjectionScope.SINGLETON;

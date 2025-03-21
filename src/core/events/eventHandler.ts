@@ -1,4 +1,4 @@
-// eslint-disable no-invalid-remove-event-listener
+
 export function EventHandler(
   eventName: string,
   selector?: string,

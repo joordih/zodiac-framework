@@ -1,29 +1,28 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "experimentalDecorators": true,
+    "target": "ES2020",
     "useDefineForClassFields": true,
-    "module": "NodeNext",
-    "allowJs": true,
-    "checkJs": true,
-    "resolveJsonModule": true,
-    "lib": ["ES6", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
-    "moduleResolution": "nodenext",
+    "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "moduleDetection": "force",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
     "noEmit": true,
-    "emitDecoratorMetadata": true,
     "strict": true,
-    "noUnusedLocals": false,
+    "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-    "sourceMap": true,
     "baseUrl": ".",
+    "esModuleInterop": true,
+		"jsx": "react",
+		"jsxFactory": "DecoElement.h",
+		"jsxFragmentFactory": "DecoElement.Fragment",
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
     "paths": {
-      "@/*": ["src/*"],
-      "@core/*": ["src/core/*"]
+      "@/*": ["src/*"]
     }
   },
   "include": ["src"]

@@ -1,4 +1,3 @@
-import { ValidationRule } from "../validation/validators.ts";
 
 export type FormControlStatus = 'VALID' | 'INVALID' | 'PENDING' | 'DISABLED';
 
@@ -17,6 +16,7 @@ export class FormControl<T> {
   private errors: string[] = [];
   private status: FormControlStatus = 'VALID';
   private disabled = false;
+  // @ts-ignore
   private pending = false;
   
   constructor(initialValue: T, options: FormControlOptions = {}) {

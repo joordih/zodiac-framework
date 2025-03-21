@@ -4,6 +4,8 @@ import { ServiceData } from "../../services/decorator.ts";
 import { InjectionScope } from "../../injection/injection-scope.ts";
 import { IRouterOutlet } from "./router-outlet-interface.ts";
 
+const isBrowser = typeof window !== 'undefined';
+
 @ServiceData({
   token: 'typed-router-service',
   scope: InjectionScope.SINGLETON
@@ -15,17 +17,21 @@ export class TypedRouterService implements IService {
   private outlets: IRouterOutlet[] = [];
   
   async onInit(): Promise<void> {
-    window.addEventListener('popstate', () => {
-      this.handleLocationChange();
-    });
+    if (isBrowser) {
+      window.addEventListener('popstate', () => {
+        this.handleLocationChange();
+      });
+    }
     
     this.handleLocationChange();
   }
   
   async onDestroy(): Promise<void> {
-    window.removeEventListener('popstate', () => {
-      this.handleLocationChange();
-    });
+    if (isBrowser) {
+      window.removeEventListener('popstate', () => {
+        this.handleLocationChange();
+      });
+    }
   }
   
   register(): void | Promise<void> {
@@ -45,7 +51,7 @@ export class TypedRouterService implements IService {
     if (!this.outlets.includes(outlet)) {
       this.outlets.push(outlet);
       
-      // If we already have a route match, render it in the new outlet
+      
       const routeMatch = this.getCurrentRouteMatch();
       if (routeMatch.route) {
         this.activateRoute(routeMatch.route, routeMatch.params, routeMatch.queryParams);
@@ -62,6 +68,8 @@ export class TypedRouterService implements IService {
     queryParams: QueryParams = {} as QueryParams,
     options: { replaceState?: boolean } = {}
   ): void {
+    if (!isBrowser) return;
+    
     const path = this.buildPath(route.path, params);
     const queryString = this.buildQueryString(queryParams);
     const fullPath = queryString ? `${path}?${queryString}` : path;
@@ -84,6 +92,9 @@ export class TypedRouterService implements IService {
   }
   
   getCurrentPath(): string {
+    if (isBrowser) {
+      return window.location.pathname;
+    }
     return this.currentPath;
   }
   
@@ -160,6 +171,8 @@ export class TypedRouterService implements IService {
   }
   
   private handleLocationChange(): void {
+    if (!isBrowser) return;
+    
     const path = window.location.pathname;
     const queryString = window.location.search.substring(1);
     
@@ -194,6 +207,8 @@ export class TypedRouterService implements IService {
     params: RouteParams,
     queryParams: RouteQueryParams
   ): void {
+    if (!isBrowser) return;
+    
     if (result === true) {
       this.activateRoute(route, params, queryParams);
     } else if (typeof result === 'string') {
@@ -207,11 +222,13 @@ export class TypedRouterService implements IService {
     params: RouteParams,
     queryParams: RouteQueryParams
   ): void {
+    if (!isBrowser) return;
+    
     if (route.title) {
       document.title = route.title;
     }
     
-    // Use registered outlets if available, otherwise fallback to querySelector
+    
     if (this.outlets.length > 0) {
       const component = document.createElement(route.component);
       
@@ -229,12 +246,12 @@ export class TypedRouterService implements IService {
         }
       }
       
-      // Render in all registered outlets
+      
       for (const outlet of this.outlets) {
         outlet.renderComponent(component.cloneNode(true) as HTMLElement);
       }
     } else {
-      // Fallback to querySelector for backward compatibility
+      
       const outlet = document.querySelector('router-outlet');
       
       if (outlet) {
@@ -262,7 +279,7 @@ export class TypedRouterService implements IService {
   
   private matchRoute(
     path: string,
-    queryString: string = window.location.search.substring(1)
+    queryString: string = isBrowser ? window.location.search.substring(1) : ''
   ): { 
     route: TypedRoute<any, any> | null; 
     params: RouteParams; 
@@ -271,60 +288,36 @@ export class TypedRouterService implements IService {
     const queryParams = this.parseQueryParams(queryString);
     
     for (const route of this.routes) {
-      const match = this.matchRoutePath(route.path, path);
+      const params = this.matchRoutePath(route.path, path);
       
-      if (match) {
-        return {
-          route,
-          params: match,
-          queryParams
-        };
-      }
-      
-      if (route.children) {
-        for (const childRoute of route.children) {
-          const fullPath = `${route.path}/${childRoute.path}`.replace(/\/+/g, '/');
-          const match = this.matchRoutePath(fullPath, path);
-          
-          if (match) {
-            return {
-              route: childRoute,
-              params: match,
-              queryParams
-            };
-          }
-        }
+      if (params !== null) {
+        return { route, params, queryParams };
       }
     }
     
-    return {
-      route: null,
-      params: {},
-      queryParams
-    };
+    return { route: null, params: {}, queryParams };
   }
   
   private matchRoutePath(pattern: string, path: string): RouteParams | null {
-    const paramNames: string[] = [];
-    let regexPattern = pattern.replace(/:[a-zA-Z0-9_]+/g, (match) => {
-      const paramName = match.substring(1);
-      paramNames.push(paramName);
-      return '([^/]+)';
-    });
+    const patternParts = pattern.split('/').filter(Boolean);
+    const pathParts = path.split('/').filter(Boolean);
     
-    regexPattern = `^${regexPattern.replace(/([.+*?=^!:${}()[\]|/\\])/g, '\\$1')}$`;
-    
-    const regex = new RegExp(regexPattern);
-    const match = path.match(regex);
-    
-    if (!match) {
+    if (patternParts.length !== pathParts.length) {
       return null;
     }
     
     const params: RouteParams = {};
     
-    for (let i = 0; i < paramNames.length; i++) {
-      params[paramNames[i]] = match[i + 1];
+    for (let i = 0; i < patternParts.length; i++) {
+      const patternPart = patternParts[i];
+      const pathPart = pathParts[i];
+      
+      if (patternPart.startsWith(':')) {
+        const paramName = patternPart.slice(1);
+        params[paramName] = pathPart;
+      } else if (patternPart !== pathPart) {
+        return null;
+      }
     }
     
     return params;

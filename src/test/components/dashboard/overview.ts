@@ -20,8 +20,7 @@ export interface DashboardEvents {
 @ZodiacComponent("overview-component")
 @Injectable()
 @TypedEvents<DashboardEvents>()
-// eslint-disable-next-line no-unused-vars
-class OverviewDashboard
+export class OverviewDashboard
   extends BaseComponent
   implements TypedEventComponent<DashboardEvents>
 {
@@ -130,6 +129,7 @@ class OverviewDashboard
   }
 
   @EventHandler("click", ".metric-card")
+  // @ts-ignore
   private handleMetricClick(_e: MouseEvent, element: Element) {
     const metricName = element.getAttribute("data-metric");
     if (metricName) {
@@ -599,7 +599,7 @@ class OverviewDashboard
                 }).join("")}
               </div>
               ${this.chartData.months
-                .map((month, index) => {
+                .map((_month, index) => {
                   const value = this.chartData.values[index];
                   const maxValue = Math.max(...this.chartData.values);
                   const height = (value / maxValue) * 100;

@@ -49,6 +49,7 @@ export class AdminPanel
   private directiveManager!: DirectiveManager;
 
   @Inject("typed-router-service")
+  // @ts-ignore
   private routerService!: TypedRouterService;
 
   emit!: <K extends keyof AdminEvents>(event: K, data: AdminEvents[K]) => void;
@@ -186,6 +187,7 @@ export class AdminPanel
   @EventHandler("click", "#toggle-sidebar")
   @LoggerMiddleware
   @ErrorBoundaryMiddleware
+  // @ts-ignore
   private handleSidebarToggle(_e: MouseEvent) {
     this.sidebarCollapsed = !this.sidebarCollapsed;
     this.emit("sidebar-toggle", this.sidebarCollapsed);
@@ -195,6 +197,7 @@ export class AdminPanel
   @EventHandler("click", "#theme-toggle")
   @LoggerMiddleware
   @ErrorBoundaryMiddleware
+  // @ts-ignore
   private handleThemeToggle(_e: MouseEvent) {
     this.themeService.toggleTheme();
     const newTheme = this.themeService.getTheme();
@@ -223,6 +226,7 @@ export class AdminPanel
   @EventHandler("click", ".menu-item")
   @LoggerMiddleware
   @ErrorBoundaryMiddleware
+  // @ts-ignore
   private handleMenuSelect(e: MouseEvent) {
     const menuItem = (e.target as HTMLElement).closest(".menu-item");
     if (menuItem) {
