@@ -14,7 +14,8 @@
     "dev:server": "tsx watch src/core/ssr/server.ts",
     "build:ssr": "npm run build && tsc -p tsconfig.server.json",
     "build": "npx zodiac-compiler-v2 -p tsconfig.json -o dist -e src",
-    "serve": "serve dist -p 3000"
+    "serve": "serve dist -p 3000",
+    "start": "npm run build:ssr && tsx src/core/ssr/server.ts"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.10",

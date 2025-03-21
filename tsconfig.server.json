@@ -6,7 +6,6 @@
     "target": "ESNext",
     "lib": ["ESNext", "DOM"],
     "outDir": "dist/server",
-    "noEmit": false,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
@@ -15,6 +14,14 @@
     "jsx": "react",
     "jsxFactory": "h",
     "jsxFragmentFactory": "Fragment",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@core/*": ["src/core/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

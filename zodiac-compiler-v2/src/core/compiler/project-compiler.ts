@@ -18,6 +18,7 @@ export class ProjectCompiler {
     this.rspackConfig = {
       target: ['web'],
       entry: {
+        zodiac: path.resolve(projectRoot, 'src/core/polyfills/index.ts'),
         main: path.resolve(projectRoot, 'src/index.ts')
       },
       output: {
@@ -28,22 +29,15 @@ export class ProjectCompiler {
       },
       optimization: {
         minimize: this.options.minify,
-        splitChunks: this.options.lazy ? {
-          chunks: 'async',
-          minSize: 20000,
-          maxSize: 50000,
+        splitChunks: {
           cacheGroups: {
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              chunks: 'all',
-              priority: 10
-            },
             framework: {
               test: /[\\/]src[\\/]core[\\/]/,
-              name: 'framework',
+              name: 'zodiac',
               chunks: 'all',
-              priority: 5
+              enforce: true,
+              priority: 100,
+              reuseExistingChunk: true
             },
             components: {
               test: /[\\/]src[\\/]test[\\/]components[\\/]/,
@@ -56,7 +50,7 @@ export class ProjectCompiler {
               priority: 0
             }
           }
-        } : false
+        }
       },
       module: {
         rules: [
@@ -137,6 +131,13 @@ export class ProjectCompiler {
         new (require('@rspack/core').DefinePlugin)({
           'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
           'global': 'globalThis'
+        }),
+        new (require('@rspack/core').HtmlRspackPlugin)({
+          template: path.resolve(projectRoot, 'index.html'),
+          filename: 'index.html',
+          title: 'Zodiac Framework',
+          inject: true,
+          scriptLoading: 'defer'
         })
       ]
     }
