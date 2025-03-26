@@ -9,16 +9,16 @@ const PORT = process.env.PORT || 3000;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.resolve(__dirname, '../../../dist');
 
-// Servir archivos estáticos desde dist
+
 app.use(express.static(distPath));
 
-// Manejar todas las rutas para SSR
+
 app.get('*', async (req, res) => {
   try {
     const url = req.url;
     const html = await renderToString(url);
     
-    // Insertar los scripts del cliente
+    
     const finalHtml = html.replace(
       '</body>',
       `
@@ -30,7 +30,7 @@ app.get('*', async (req, res) => {
     res.send(finalHtml);
   } catch (error) {
     console.error('SSR Error:', error);
-    // En caso de error, enviar el HTML del cliente
+    
     res.sendFile(path.join(distPath, 'index.html'));
   }
 });

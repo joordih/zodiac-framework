@@ -195,7 +195,7 @@ export class DashboardComponent extends BaseComponent implements TypedEventCompo
 
     if (isBrowser) {
       try {
-        // Dynamic import using the new chunk naming convention
+
         await import(`../components/dashboard/${componentName}`);
         return `<${componentName}-component data-component="${componentName}-component"></${componentName}-component>`;
       } catch (error) {

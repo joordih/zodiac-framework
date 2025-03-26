@@ -27,6 +27,6 @@
     "@types/node": "^20.0.0",
     "rimraf": "^5.0.5",
     "typescript": "^5.0.0",
-    "zodiac-compiler-v2": "file:zodiac-compiler-v2"
+    "zodiac-compiler-v2": "file:zodiac-compiler"
   }
 }

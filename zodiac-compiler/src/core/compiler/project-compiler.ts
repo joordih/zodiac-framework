@@ -1,311 +1,369 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as ts from 'typescript';
-import { Parser } from '../parser/parser';
-import { Minifier } from '../minifier/minifier';
-import { DependencyAnalyzer } from '../analyzer/dependency-analyzer';
+import { Configuration, HtmlRspackPlugin } from '@rspack/core'
+import * as path from 'path'
+import * as fs from 'fs'
+import * as crypto from 'crypto'
 
 interface ProjectCompilerOptions {
-  outDir: string;
-  minify?: boolean;
-  lazy?: boolean;
-  entryPoints: string[];
-  exclude?: string[];
+  outDir: string
+  minify: boolean
+  lazy: boolean
+  entryPoints: string[]
+  mode?: 'development' | 'production'
+  ssr?: boolean
+  isServer?: boolean
+  port?: number
+  target?: 'framework' | 'app' | 'all'
+}
+
+function getChunkName(filePath: string): string {
+  const relativePath = path.relative(process.cwd(), filePath)
+  const hash = crypto.createHash('md5').update(relativePath).digest('hex').slice(0, 8)
+  const fileName = path.basename(filePath, path.extname(filePath))
+  return `${fileName}.${hash}`
 }
 
 export class ProjectCompiler {
-  private processedFiles: Set<string> = new Set();
-  private compiledFiles: Map<string, string> = new Map();
-  private dependencyGraph: Map<string, Set<string>> = new Map();
-  private chunks: Map<string, Set<string>> = new Map();
+  private rspackConfig: Configuration | Configuration[]
 
   constructor(private options: ProjectCompilerOptions) {
-    this.options.minify = this.options.minify ?? false;
-    this.options.lazy = this.options.lazy ?? false;
-    this.options.exclude = this.options.exclude ?? [];
+    const projectRoot = process.cwd()
+    const isDevelopment = this.options.mode === 'development'
+    const isServerBuild = Boolean(this.options.isServer)
+
+    if (this.options.target === 'framework' || this.options.target === 'all') {
+      this.rspackConfig = this.createConfigs(projectRoot, isDevelopment, isServerBuild)
+    } else {
+      this.rspackConfig = this.createAppConfig(projectRoot, isDevelopment, isServerBuild)
+    }
   }
 
-  private getCompilerOptions(): ts.CompilerOptions {
+  private createFrameworkConfig(projectRoot: string, isDev: boolean, isServer: boolean): Configuration {
+    const polyfillsConfig = {
+      crypto: require.resolve('crypto-browserify'),
+      stream: require.resolve('stream-browserify'),
+      buffer: require.resolve('buffer/'),
+      util: require.resolve('util/'),
+      assert: require.resolve('assert/'),
+      url: require.resolve('url/'),
+      path: require.resolve('path-browserify'),
+      zlib: require.resolve('browserify-zlib'),
+      http: require.resolve('stream-http'),
+      https: require.resolve('https-browserify'),
+      querystring: require.resolve('querystring-es3')
+    }
+
     return {
-      target: ts.ScriptTarget.ES2020,
-      module: ts.ModuleKind.ESNext,
-      moduleResolution: ts.ModuleResolutionKind.Bundler,
-      jsx: ts.JsxEmit.React,
-      jsxFactory: 'h',
-      jsxFragmentFactory: 'Fragment',
-      esModuleInterop: true,
-      allowSyntheticDefaultImports: true,
-      isolatedModules: true,
-      verbatimModuleSyntax: true,
-      skipLibCheck: true,
-      lib: ['DOM', 'DOM.Iterable', 'ESNext'],
-      outDir: this.options.outDir,
-      sourceMap: true,
-      declaration: true,
-      noEmit: false,
-      allowJs: true,
-      resolveJsonModule: true
-    };
-  }
-
-  private async processFile(filePath: string): Promise<void> {
-    if (this.processedFiles.has(filePath)) return;
-    if (this.shouldExclude(filePath)) return;
-
-    this.processedFiles.add(filePath);
-
-    try {
-      const source = fs.readFileSync(filePath, 'utf-8');
-      const parser = new Parser(filePath);
-      const ast = parser.parse();
-      
-      const analyzer = new DependencyAnalyzer(ast);
-      const dependencies = analyzer.analyze(filePath);
-      
-      for (const [importPath] of Array.from(dependencies.imports.entries())) {
-        const resolvedPath = this.resolveImportPath(filePath, importPath);
-        if (resolvedPath) {
-          if (!this.dependencyGraph.has(filePath)) {
-            this.dependencyGraph.set(filePath, new Set());
+      name: 'framework',
+      mode: this.options.mode || 'production',
+      target: isServer ? ['node'] : ['web'],
+      devtool: isDev ? 'eval-source-map' : false,
+      entry: {
+        'zodiac-core': path.resolve(projectRoot, 'src/core/index.d.ts'),
+        'zodiac-polyfills': path.resolve(projectRoot, 'src/core/polyfills/index.ts')
+      },
+      output: {
+        path: path.join(this.options.outDir, 'framework'),
+        filename: '[name].js',
+        library: {
+          type: isServer ? 'commonjs2' : 'umd',
+          name: 'ZodiacFramework'
+        },
+        globalObject: 'this'
+      },
+      optimization: {
+        minimize: !isServer && this.options.minify,
+        moduleIds: 'deterministic',
+        chunkIds: 'deterministic'
+      },
+      module: {
+        rules: [
+          {
+            test: /\.tsx?$/,
+            use: {
+              loader: 'builtin:swc-loader',
+              options: {
+                jsc: {
+                  parser: {
+                    syntax: 'typescript',
+                    tsx: true,
+                    decorators: true
+                  },
+                  transform: {
+                    react: {
+                      pragma: 'h',
+                      pragmaFrag: 'Fragment'
+                    },
+                    decoratorMetadata: true,
+                    legacyDecorator: true
+                  },
+                  target: 'es2020'
+                },
+                sourceMaps: isDev
+              }
+            }
           }
-          this.dependencyGraph.get(filePath)!.add(resolvedPath);
-          await this.processFile(resolvedPath);
-        }
-      }
-
-      const compilerOptions = this.getCompilerOptions();
-      let output = this.transformImports(source, filePath);
-      
-      const result = ts.transpileModule(output, {
-        compilerOptions,
-        fileName: filePath,
-        reportDiagnostics: true
-      });
-
-      if (result.diagnostics && result.diagnostics.length > 0) {
-        result.diagnostics.forEach(diagnostic => {
-          const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
-          console.warn(`Warning in ${filePath}: ${message}`);
-        });
-      }
-
-      output = result.outputText;
-      
-      if (this.options.minify) {
-        const minifier = new Minifier(output, ast);
-        output = minifier.minify();
-      }
-
-      const outPath = this.getOutputPath(filePath);
-      const outDir = path.dirname(outPath);
-      
-      // Create output directory before writing files
-      if (!fs.existsSync(outDir)) {
-        fs.mkdirSync(outDir, { recursive: true });
-      }
-
-      // Write the JS file
-      fs.writeFileSync(outPath, output);
-      
-      // Write the source map if it exists
-      if (result.sourceMapText) {
-        fs.writeFileSync(`${outPath}.map`, result.sourceMapText);
-      }
-
-      this.compiledFiles.set(filePath, output);
-
-    } catch (error) {
-      console.error(`Error processing file ${filePath}:`, error);
-      throw error;
+        ]
+      },
+      resolve: {
+        extensions: ['.ts', '.tsx', '.js', '.jsx'],
+        alias: {
+          '@core': path.resolve(projectRoot, 'src/core'),
+          'crypto': polyfillsConfig.crypto
+        },
+        fallback: !isServer ? {
+          ...polyfillsConfig,
+          fs: false,
+          net: false,
+          tls: false,
+          child_process: false,
+          vm: false,
+          'perf_hooks': false
+        } : {}
+      },
+      plugins: [
+        new (require('@rspack/core').DefinePlugin)({
+          'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || this.options.mode || 'production'),
+          'process.env.FRAMEWORK': JSON.stringify(true),
+          'global': isServer ? 'global' : 'globalThis'
+        }),
+        new (require('@rspack/core').ProvidePlugin)({
+          Buffer: ['buffer', 'Buffer'],
+          process: 'process/browser'
+        })
+      ]
     }
   }
 
-  private getOutputPath(filePath: string): string {
-    const relativePath = path.relative(process.cwd(), filePath);
-    return path.join(
-      this.options.outDir,
-      relativePath.replace(/\.tsx?$/, '.js')
-    );
-  }
+  private getTemplate(projectRoot: string): string {
+    const indexContent = fs.readFileSync(path.resolve(projectRoot, 'index.html'), 'utf8');
+    return indexContent.replace('<head>', '<head><base href="/">')
+  };
 
-  private transformImports(source: string, filePath: string): string {
-    return source.replace(
-      /(import[\s\S]*?from\s+['"])([\.\/].*?)(['"])/g,
-      (match, start, importPath, end) => {
-        if (!importPath.endsWith('.js')) {
-          importPath = importPath.replace(/\.tsx?$/, '.js');
-          if (!importPath.endsWith('.js')) {
-            importPath = `${importPath}.js`;
+  private createAppConfig(projectRoot: string, isDev: boolean, isServer: boolean): Configuration {
+    const ssrEntry = path.resolve(projectRoot, 'src/core/ssr/entry.ts')
+    
+    return {
+      name: 'app',
+      mode: this.options.mode || 'production',
+      target: isServer ? ['node'] : ['web'],
+      devtool: isDev ? 'eval-source-map' : false,
+      entry: isServer ? {
+        server: ssrEntry
+      } : {
+        main: path.resolve(projectRoot, 'src/index.ts')
+      },
+      output: {
+        path: isServer ? path.join(this.options.outDir, 'server') : this.options.outDir,
+        filename: '[name].js',
+        chunkFilename: 'chunks/[name].js',
+        publicPath: '/',
+        ...(isServer && {
+          library: {
+            type: 'commonjs2'
+          }
+        })
+      },
+      optimization: {
+        minimize: !isServer && this.options.minify,
+        splitChunks: !isServer && {
+          cacheGroups: {
+            framework: {
+              test: /[\\/]src[\\/]core[\\/]/,
+              name: 'zodiac',
+              chunks: 'all',
+              enforce: true,
+              priority: 100,
+              reuseExistingChunk: true
+            },
+            components: {
+              test: /[\\/]src[\\/]test[\\/]components[\\/]/,
+              name: (module: any) => {
+                const identifier = module?.identifier() || '';
+                if (!identifier) return 'unknown';
+                return `component-${getChunkName(identifier)}`;
+              },
+              chunks: 'async',
+              priority: 0
+            }
           }
         }
-        return `${start}${importPath}${end}`;
-      }
-    );
+      },
+      module: {
+        rules: [
+          {
+            test: /\.tsx?$/,
+            use: {
+              loader: 'builtin:swc-loader',
+              options: {
+                jsc: {
+                  parser: {
+                    syntax: 'typescript',
+                    tsx: true,
+                    decorators: true
+                  },
+                  transform: {
+                    react: {
+                      pragma: 'h',
+                      pragmaFrag: 'Fragment'
+                    },
+                    decoratorMetadata: true,
+                    legacyDecorator: true
+                  },
+                  target: 'es2020'
+                },
+                sourceMaps: isDev
+              }
+            }
+          },
+          {
+            test: /\.css$/,
+            type: 'css'
+          },
+          {
+            test: /\.(png|svg|jpg|jpeg|gif)$/i,
+            type: 'asset/resource'
+          }
+        ]
+      },
+      resolve: {
+        extensions: ['.ts', '.tsx', '.js', '.jsx'],
+        alias: {
+          '@': path.resolve(projectRoot, 'src'),
+          '@core': path.resolve(projectRoot, 'src/core'),
+          '@polyfills': path.resolve(projectRoot, 'src/core/polyfills'),
+          'happy-dom': false,
+          'jsdom': false,
+          'querystring': require.resolve('querystring-es3'),
+          'crypto': require.resolve('crypto-browserify')
+        },
+        preferRelative: true,
+        mainFields: isServer ? ['module', 'main'] : ['browser', 'module', 'main'],
+        fallback: !isServer ? {
+          querystring: require.resolve('querystring-es3'),
+          zlib: require.resolve('browserify-zlib'),
+          url: require.resolve('url/'),
+          path: require.resolve('path-browserify'),
+          util: require.resolve('util/'),
+          stream: require.resolve('stream-browserify'),
+          http: require.resolve('stream-http'),
+          https: require.resolve('https-browserify'),
+          crypto: require.resolve('crypto-browserify'),
+          buffer: require.resolve('buffer/'),
+          assert: require.resolve('assert/'),
+          fs: false,
+          net: false,
+          tls: false,
+          child_process: false,
+          vm: false,
+          'perf_hooks': false
+        } : {}
+      },
+      plugins: [
+        new (require('@rspack/core').DefinePlugin)({
+          'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || this.options.mode || 'production'),
+          'process.env.SSR': JSON.stringify(!!this.options.ssr),
+          'global': isServer ? 'global' : 'globalThis'
+        }),
+        ...(isServer ? [] : [
+          new (require('@rspack/core').ProvidePlugin)({
+            Buffer: ['buffer', 'Buffer'],
+            process: 'process/browser'
+          }),
+          new (require('@rspack/core').HtmlRspackPlugin)({
+            template: path.resolve(projectRoot, 'index.html'),
+            filename: 'index.html',
+            title: 'Zodiac Framework',
+            inject: true,
+            scriptLoading: 'defer',
+            templateContent: this.getTemplate(projectRoot)
+          })
+        ]),
+        ...(isDev && !isServer ? [
+          new (require('@rspack/core').HotModuleReplacementPlugin)()
+        ] : [])
+      ]
+    }
   }
 
-  private shouldExclude(filePath: string): boolean {
-    if (!this.options.exclude || this.options.exclude.length === 0) {
-      return false;
+  private createConfigs(projectRoot: string, isDev: boolean, isServer: boolean): Configuration[] {
+    const configs: Configuration[] = []
+
+    if (this.options.target === 'framework') {
+      configs.push(this.createFrameworkConfig(projectRoot, isDev, isServer))
+    } else if (this.options.target === 'all') {
+      configs.push(
+        this.createFrameworkConfig(projectRoot, isDev, isServer),
+        this.createAppConfig(projectRoot, isDev, isServer)
+      )
     }
 
-    return this.options.exclude.some((pattern: string) => {
-      const regex = new RegExp(pattern.replace('*', '.*'));
-      return regex.test(filePath);
-    });
-  }
-
-  private resolveImportPath(fromPath: string, importPath: string): string | null {
-    try {
-      const projectRoot = process.cwd();
-      
-      
-      if (importPath.startsWith('@/')) {
-        const srcPath = path.join(projectRoot, 'src');
-        const resolvedPath = path.join(srcPath, importPath.slice(2));
-        
-        if (!resolvedPath.endsWith('.ts')) {
-          return resolvedPath + '.ts';
-        }
-        return resolvedPath;
-      }
-
-      
-      if (importPath.startsWith('.')) {
-        const resolvedPath = path.resolve(path.dirname(fromPath), importPath);
-        
-        if (!resolvedPath.endsWith('.ts')) {
-          return resolvedPath + '.ts';
-        }
-        return resolvedPath;
-      }
-
-      
-      try {
-        return require.resolve(importPath, { paths: [projectRoot] });
-      } catch {
-        
-        const srcPath = path.join(projectRoot, 'src');
-        const resolvedPath = path.join(srcPath, importPath);
-        if (!resolvedPath.endsWith('.ts')) {
-          return resolvedPath + '.ts';
-        }
-        return resolvedPath;
-      }
-    } catch (error) {
-      console.warn(`Warning: Could not resolve import path ${importPath} from ${fromPath}`);
-      return null;
-    }
+    return configs
   }
 
   async compileProject(): Promise<void> {
-    console.log(`\nCompiling ${this.options.entryPoints.length} files...`);
-    
-    
-    await Promise.all(this.options.entryPoints.map(entry => this.processFile(entry)));
+    const rspack = require('@rspack/core')
+    const configs = Array.isArray(this.rspackConfig) ? this.rspackConfig : [this.rspackConfig]
 
-    
-    if (this.options.lazy) {
-      const visited = new Set<string>();
-      
-      for (const file of Array.from(this.processedFiles)) {
-        if (!visited.has(file)) {
-          const chunk = new Set<string>();
-          this.traverseChunk(file, chunk, visited);
-          this.chunks.set(file, chunk);
-        }
-      }
+    if (this.options.mode === 'development' && !this.options.isServer && this.options.target !== 'framework') {
+      const devServer = new (require('@rspack/dev-server'))(rspack(configs[configs.length - 1]), {
+        port: this.options.port,
+        hot: true,
+        historyApiFallback: true,
+        setupMiddlewares: (middlewares: any, devServer: any) => {
+          if (!this.options.ssr) return middlewares
 
-      
-      this.chunks.forEach((files, entryPoint) => {
-        const chunkId = this.generateChunkId(entryPoint);
-        this.updateImportsForChunk(files, chunkId);
-      });
-    }
+          const ssrMiddleware = async (req: any, res: any, next: any) => {
+            if (req.url.endsWith('.js') || req.url.endsWith('.css') || req.url.includes('__rspack_hmr__')) {
+              return next()
+            }
 
-    
-    if (!fs.existsSync(this.options.outDir)) {
-      fs.mkdirSync(this.options.outDir, { recursive: true });
-    }
-
-    
-    for (const [filePath, content] of Array.from(this.compiledFiles.entries())) {
-      const outPath = this.getOutputPath(filePath);
-      fs.mkdirSync(path.dirname(outPath), { recursive: true });
-      fs.writeFileSync(outPath, content);
-      console.log(`Written: ${outPath}`);
-    }
-
-    
-    if (this.options.lazy) {
-      const lazyLoadMap = this.generateLazyLoadMap();
-      fs.writeFileSync(
-        path.join(this.options.outDir, 'lazy-load-map.json'),
-        JSON.stringify(lazyLoadMap, null, 2)
-      );
-    }
-
-    
-    const indexPath = path.join(this.options.outDir, 'index.html');
-    if (!fs.existsSync(indexPath)) {
-      const indexContent = `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zodiac App</title>
-  </head>
-  <body>
-    <script type="module" src="./src/index.js"></script>
-  </body>
-</html>`;
-      fs.writeFileSync(indexPath, indexContent);
-      console.log('Created:', indexPath);
-    }
-
-    console.log('Compilation completed successfully!');
-  }
-
-  private traverseChunk(file: string, chunk: Set<string>, visited: Set<string>): void {
-    visited.add(file);
-    chunk.add(file);
-
-    const dependencies = this.dependencyGraph.get(file) || new Set();
-    for (const dep of Array.from(dependencies)) {
-      if (!visited.has(dep)) {
-        this.traverseChunk(dep, chunk, visited);
-      }
-    }
-  }
-
-  private generateChunkId(filePath: string): string {
-    return path.basename(filePath, path.extname(filePath)) + '_' + 
-           Buffer.from(filePath).toString('base64').slice(0, 8);
-  }
-
-  private updateImportsForChunk(files: Set<string>, chunkId: string): void {
-    files.forEach(file => {
-      let content = this.compiledFiles.get(file) || '';
-      content = content.replace(
-        /import\s+.*?\s+from\s+['"](.+?)['"]/g,
-        (match, importPath) => {
-          const resolvedPath = this.resolveImportPath(file, importPath);
-          if (resolvedPath && files.has(resolvedPath)) {
-            return `import /* webpackChunkName: "${chunkId}" */ ${match}`;
+            try {
+              const serverBundle = require(path.join(this.options.outDir, 'server/server.js'))
+              const html = await serverBundle.render(req.url)
+              res.send(html)
+            } catch (error) {
+              console.error('SSR Error:', error)
+              next()
+            }
           }
-          return match;
-        }
-      );
-      this.compiledFiles.set(file, content);
-    });
-  }
 
-  private generateLazyLoadMap(): Record<string, string[]> {
-    const map: Record<string, string[]> = {};
-    this.dependencyGraph.forEach((deps, file) => {
-      map[this.generateChunkId(file)] = Array.from(deps).map(dep => 
-        path.relative(process.cwd(), dep)
-      );
-    });
-    return map;
+          return [...middlewares, { middleware: ssrMiddleware }]
+        }
+      })
+
+      return new Promise((resolve) => {
+        devServer.start().then(() => {
+          console.log(`Dev server running at http://localhost:${this.options.port}`)
+          resolve()
+        })
+      })
+    }
+
+    return Promise.all(configs.map(config => {
+      return new Promise<void>((resolve, reject) => {
+        const compiler = rspack(config)
+        compiler.run((err: any, stats: any) => {
+          if (err) {
+            reject(err)
+            return
+          }
+
+          if (stats.hasErrors()) {
+            const info = stats.toJson()
+            console.error(`Build errors for ${config.name}:`, info.errors)
+            reject(new Error(`Build failed with errors for ${config.name}`))
+            return
+          }
+
+          console.log(stats.toString({
+            colors: true,
+            chunks: false,
+            modules: false
+          }))
+
+          resolve()
+        })
+      })
+    })).then(() => {})
   }
 }

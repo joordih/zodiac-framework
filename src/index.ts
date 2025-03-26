@@ -9,7 +9,7 @@ export { Lazy } from "./core/lazy/lazy";
 export { Middleware } from "./core/middleware/middleware";
 export { Render } from "./core/render/vdom";
 
-// Import services
+
 import "./test/services/api-data";
 import "./test/services/theme-service";
 
@@ -18,11 +18,11 @@ console.log("🚀 Zodiac Framework is initializing main instances...");
 import { DirectiveManager } from '@/core/directives/directive-manager';
 import { TypedRouterService } from '@/core/router/typed/router-service';
 
-// Register core services
+
 SauceContainer.register('typed-router-service', TypedRouterService);
 SauceContainer.register('directive-manager', DirectiveManager);
 
-// Initialize core services
+
 const initializeServices = async () => {
   const routerService = await SauceContainer.resolve('typed-router-service') as TypedRouterService;
   const directiveManager = await SauceContainer.resolve('directive-manager') as DirectiveManager;
@@ -39,7 +39,7 @@ const initializeServices = async () => {
   console.log("✅ Services initialized");
 };
 
-// Import and register components
+
 const registerComponents = async () => {
   try {
     await Promise.all([
@@ -57,16 +57,16 @@ const registerComponents = async () => {
   }
 };
 
-// Initialize the application
+
 const initializeApp = async () => {
   try {
-    // First initialize services
+    
     await initializeServices();
     
-    // Then register components
+    
     await registerComponents();
     
-    // Initialize router with history mode and wait for it to be ready
+    
     Router.init({ mode: 'history' });
     console.log("✅ Router initialized");
 
@@ -75,7 +75,7 @@ const initializeApp = async () => {
   }
 };
 
-// Start the application when DOM is ready
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
