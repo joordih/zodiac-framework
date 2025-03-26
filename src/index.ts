@@ -9,17 +9,31 @@ export { Lazy } from "./core/lazy/lazy.ts";
 export { Injectable } from "./core/injection/injectable.ts";
 export { Inject } from "./core/injection/inject.ts";
 
-import "./test/services/api-data.test.ts";
-import "./test/services/theme-service.ts";
+// Export SSR module
+export * from "./core/ssr/index.ts";
 
-console.log("🚀 Zodiac Framework is initializing main instances...");
+// Check if we're running in the browser or on the server
+const isBrowser = typeof window !== 'undefined';
 
-await SauceContainer.autoRegister();
-console.log("✅ Services initialized");
+if (isBrowser) {
+  import("./test/services/api-data.test.ts");
+  import("./test/services/theme-service.ts");
 
-await import("./test/components/api-card.test.ts");
-await import("./test/components/admin-panel.ts");
-console.log("✅ Components loaded");
+  console.log("🚀 Zodiac Framework is initializing main instances...");
 
-Router.init();
-console.log("✅ Router initialized");
+  await SauceContainer.autoRegister();
+  console.log("✅ Services initialized");
+
+  await import("./test/components/api-card.test.ts");
+  await import("./test/components/admin-panel.ts");
+  console.log("✅ Components loaded");
+
+  Router.init();
+  console.log("✅ Router initialized");
+} else {
+  console.log("🚀 Zodiac Framework is running in SSR mode");
+  
+  // Initialize router for SSR
+  Router.init();
+  console.log("✅ Router initialized for SSR");
+}

@@ -13,6 +13,7 @@ export class Router {
   private static currentVDom: any = null;
   private static routerViewElement: Element | null = null;
   private static initialized = false;
+  private static isServer = typeof window === 'undefined';
 
   static register(
     path: string,
@@ -46,7 +47,7 @@ export class Router {
   }
 
   private static async renderComponent(
-    container: Element,
+    container: Element | null,
     component: string,
     context: RouteContext
   ) {
@@ -54,6 +55,12 @@ export class Router {
       console.log(
         `Rendering component: ${component} for path: ${context.path}`
       );
+      
+      if (this.isServer) {
+        // Server-side rendering logic will be handled separately
+        return;
+      }
+
       const componentInstance = document.createElement(component);
 
       componentInstance.setAttribute("data-route-path", context.path);
@@ -65,8 +72,10 @@ export class Router {
       patches.forEach((patch) => patch());
       this.currentVDom = vdom;
 
-      container.innerHTML = "";
-      container.appendChild(componentInstance);
+      if (container) {
+        container.innerHTML = "";
+        container.appendChild(componentInstance);
+      }
     } catch (error) {
       console.error(`Error rendering component ${component}:`, error);
       throw error;
@@ -81,39 +90,48 @@ export class Router {
       const context: RouteContext = {
         path,
         params: this.extractParams(path, route.path),
-        query: new URLSearchParams(window.location.search),
+        query: this.isServer ? new URLSearchParams() : new URLSearchParams(window.location.search),
         component: route.component,
       };
 
       try {
-        if (!this.routerViewElement) {
-          this.routerViewElement = document.querySelector("router-view");
+        if (!this.isServer) {
           if (!this.routerViewElement) {
-            this.routerViewElement = document.createElement("router-view");
-            document.body.appendChild(this.routerViewElement);
-            console.log("Created router-view element dynamically");
+            this.routerViewElement = document.querySelector("router-view");
+            if (!this.routerViewElement) {
+              this.routerViewElement = document.createElement("router-view");
+              document.body.appendChild(this.routerViewElement);
+              console.log("Created router-view element dynamically");
+            }
           }
         }
 
         await this.runMiddlewares(context, this.middlewares);
         await this.runMiddlewares(context, route.middlewares);
-        await this.renderComponent(
-          this.routerViewElement,
-          route.component,
-          context
-        );
+        
+        if (!this.isServer) {
+          await this.renderComponent(
+            this.routerViewElement,
+            route.component,
+            context
+          );
 
-        if (updateHistory) {
-          history.pushState({}, "", path);
+          if (updateHistory) {
+            history.pushState({}, "", path);
+          }
         }
+        
+        return context;
       } catch (error) {
         console.error("Navigation error:", error);
+        throw error;
       }
     } else {
       console.warn(`No route found for path: ${path}`);
       if (path !== "/" && this.routes.has("/")) {
-        this.navigate("/", updateHistory);
+        return this.navigate("/", updateHistory);
       }
+      return null;
     }
   }
 
@@ -136,6 +154,12 @@ export class Router {
   }
 
   static init() {
+    if (this.isServer) {
+      console.log("Router initialized in server mode");
+      this.initialized = true;
+      return;
+    }
+
     this.routerViewElement = document.querySelector("router-view");
     if (!this.routerViewElement) {
       this.routerViewElement = document.createElement("router-view");
@@ -160,5 +184,15 @@ export class Router {
 
     console.log(`Initial navigation to: ${location.pathname}`);
     this.navigate(location.pathname, false);
+  }
+
+  // Method for SSR to get route information
+  static getRouteByPath(path: string): RouteDefinition | undefined {
+    return this.routes.get(path);
+  }
+
+  // Method to get all registered routes
+  static getAllRoutes(): Map<string, RouteDefinition> {
+    return this.routes;
   }
 }

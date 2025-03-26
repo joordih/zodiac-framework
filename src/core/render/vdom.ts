@@ -11,6 +11,8 @@ declare global {
 }
 
 export class VirtualDOM {
+  private static isServer = typeof window === 'undefined';
+
   static createFromElement(element: HTMLElement): VNode {
     return {
       type: element.tagName,
@@ -32,6 +34,11 @@ export class VirtualDOM {
   }
 
   static diff(oldNode: VNode | null, newNode: VNode): Array<() => void> {
+    if (this.isServer) {
+      // No-op for server-side rendering
+      return [];
+    }
+
     const patches: Array<() => void> = [];
 
     if (!oldNode) {
@@ -181,6 +188,37 @@ export class VirtualDOM {
       }
     });
   }
+
+  // New method for server-side rendering
+  static renderToString(vnode: VNode): string {
+    if (typeof vnode === 'string') {
+      return vnode;
+    }
+
+    let attrs = '';
+    for (const [key, value] of Object.entries(vnode.props)) {
+      attrs += ` ${key}="${value}"`;
+    }
+
+    if (vnode.children.length === 0) {
+      return `<${vnode.type}${attrs}></${vnode.type}>`;
+    }
+
+    const children = vnode.children.map(child => 
+      typeof child === 'string' ? child : this.renderToString(child)
+    ).join('');
+
+    return `<${vnode.type}${attrs}>${children}</${vnode.type}>`;
+  }
+
+  // New method to create a VNode from a component name and props
+  static createVNodeFromComponent(componentName: string, props: Record<string, any> = {}): VNode {
+    return {
+      type: componentName,
+      props,
+      children: []
+    };
+  }
 }
 
 export function Render() {
@@ -192,6 +230,12 @@ export function Render() {
     const originalMethod = descriptor.value;
     descriptor.value = function (...args: any[]) {
       const result = originalMethod.apply(this, args);
+      
+      // Skip DOM operations on the server
+      if (typeof window === 'undefined') {
+        return result;
+      }
+      
       if (result instanceof Promise) {
         return result.then((template) => {
           const temporaryContainer = document.createElement("div");
