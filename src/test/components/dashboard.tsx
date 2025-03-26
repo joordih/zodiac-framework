@@ -13,7 +13,6 @@ import { Route } from "@/core/routing/route.ts";
 import { State } from "@/core/states/state.ts";
 import { ThemeService } from "../services/theme-service.ts";
 
-
 interface GlobalWithDOM {
   Element?: any;
   HTMLElement?: any;
@@ -23,38 +22,31 @@ interface GlobalWithDOM {
 }
 
 const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
-const globalObj = (typeof global !== 'undefined' ? global : 
-                 typeof window !== 'undefined' ? window : 
-                 typeof globalThis !== 'undefined' ? globalThis : {}) as GlobalWithDOM;
+const globalObj = (typeof global !== 'undefined' ? global :
+  typeof window !== 'undefined' ? window :
+    typeof globalThis !== 'undefined' ? globalThis : {}) as GlobalWithDOM;
 
 
 if (!isBrowser) {
-  
-  class Element {
-    
-  }
-  
+  class Element { }
+
   class HTMLElement extends Element {
-    
     public tagName: string = '';
   }
-  
+
   class Document extends Element {
     createElement(tagName: string): HTMLElement {
       const element = new HTMLElement();
       element.tagName = tagName.toUpperCase();
       return element;
     }
-    
   }
-  
-  
+
   globalObj.Element = Element;
   globalObj.HTMLElement = HTMLElement;
   globalObj.Document = Document;
   globalObj.document = new Document();
-} 
-
+}
 
 export const Element = globalObj.Element;
 export const HTMLElement = globalObj.HTMLElement;
@@ -172,7 +164,6 @@ export class DashboardComponent extends BaseComponent implements TypedEventCompo
       return;
     }
 
-    
     if (typeof this.directiveManager.applyDirectives !== 'function') {
       console.warn("DirectiveManager.applyDirectives is not a function");
       return;
@@ -198,15 +189,19 @@ export class DashboardComponent extends BaseComponent implements TypedEventCompo
     this.render();
   }
 
-  private getTabContent(tabName: string): string {
-    
+  private async getTabContent(tabName: string): Promise<string> {
     const safeTabName = typeof tabName === 'string' ? tabName : "overview";
     const componentName = safeTabName.toLowerCase();
-    
+
     if (isBrowser) {
-      return `<div lazy-load src-lazy="@/test/components/dashboard/${componentName}.tsx">
-        <${componentName}-component data-component="${componentName}-component"></${componentName}-component>
-      </div>`;
+      try {
+        // Dynamic import using the new chunk naming convention
+        await import(`../components/dashboard/${componentName}`);
+        return `<${componentName}-component data-component="${componentName}-component"></${componentName}-component>`;
+      } catch (error) {
+        console.error(`Error loading ${componentName} component:`, error);
+        return `<div class="tab-error">Failed to load ${componentName} content</div>`;
+      }
     } else {
       return `<div class="tab-placeholder">
         <p>Loading ${componentName} content...</p>
@@ -215,15 +210,15 @@ export class DashboardComponent extends BaseComponent implements TypedEventCompo
   }
 
   @Render()
-  render() {
-    
+  async render() {
     const safeActiveTab = typeof this.activeTab === 'string' ? this.activeTab : "overview";
     const safeDateRange = this.dateRange || {
       startDate: "Jan 20, 2023",
       endDate: "Feb 09, 2023"
     };
-    
-    
+
+    const tabContent = await this.getTabContent(safeActiveTab);
+
     const template = `
       <div class="dashboard-root">
         <style>
@@ -341,6 +336,12 @@ export class DashboardComponent extends BaseComponent implements TypedEventCompo
             text-align: center;
             color: var(--muted-color);
           }
+
+          .tab-error {
+            padding: 2rem;
+            text-align: center;
+            color: #ef4444;
+          }
         </style>
 
         <div class="dashboard">
@@ -364,18 +365,16 @@ export class DashboardComponent extends BaseComponent implements TypedEventCompo
           </div>
 
           <div class="tab-content">
-            ${this.getTabContent(safeActiveTab)}
+            ${tabContent}
           </div>
         </div>
       </div>
     `;
-    
-    
+
     if (this.shadowRoot) {
       this.shadowRoot.innerHTML = template;
     }
-    
-    
+
     return template;
   }
-} 
+}

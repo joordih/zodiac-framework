@@ -1,33 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title><%= htmlWebpackPlugin.options.title %></title>
-    <style>
-      :root {
-        --dark-background: hsl(240, 10%, 3.9%);
-        --dark-foreground: hsl(0, 0%, 98%);
-        --background: hsl(0, 0%, 100%);
-        --foreground: hsl(240, 5.9%, 10%);
-      }
 
-      html.dark {
-        color-scheme: dark;
-        --background: var(--dark-background);
-        --foreground: var(--dark-foreground);
-      }
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="/">
+  <title>Zodiac Framework</title>
+  <style>
+    :root {
+      --text-color: hsl(240, 10%, 3.9%);
+      --bg-color: hsl(0, 0%, 100%);
+      --card-bg: hsl(0, 0%, 100%);
+      --border-color: hsl(240, 5.9%, 90%);
+      --muted-color: hsl(240, 3.8%, 46.1%);
+      --primary-color: hsl(142.1, 76.2%, 36.3%);
+    }
 
-      body {
-        background-color: var(--background);
-        color: var(--foreground);
-        font-family: system-ui, -apple-system, sans-serif;
-        margin: 0;
-        min-height: 100vh;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="app"></div>
-  </body>
+    html.dark {
+      --text-color: hsl(0, 0%, 98%);
+      --bg-color: hsl(240, 10%, 3.9%);
+      --card-bg: hsl(240, 10%, 3.9%);
+      --border-color: hsl(240, 10%, 10%);
+      --muted-color: hsl(240, 5%, 64.9%);
+      --primary-color: hsl(142.1, 76.2%, 36.3%);
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+    }
+
+    router-view {
+      display: block;
+      width: 100%;
+      min-height: 100vh;
+    }
+  </style>
+</head>
+
+<body>
+  <router-view></router-view>
+</body>
+
 </html>

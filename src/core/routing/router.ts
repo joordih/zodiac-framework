@@ -7,12 +7,17 @@ interface RouteDefinition {
   middlewares: MiddlewareFunction[];
 }
 
+interface RouterOptions {
+  mode?: 'history' | 'hash';
+}
+
 export class Router {
   private static routes = new Map<string, RouteDefinition>();
   private static middlewares: MiddlewareFunction[] = [];
   private static currentVDom: any = null;
   private static routerViewElement: Element | null = null;
   private static initialized = false;
+  private static mode: 'history' | 'hash' = 'history';
 
   protected getRouteConfig(route: string): RouteDefinition {
     const config = Router.routes.get(route);
@@ -30,7 +35,7 @@ export class Router {
     console.log(`Registering route: ${path} -> ${component}`);
     this.routes.set(path, { path, component, middlewares });
 
-    if (this.initialized && location.pathname === path) {
+    if (this.initialized && this.getCurrentPath() === path) {
       this.navigate(path, false);
     }
   }
@@ -81,6 +86,13 @@ export class Router {
     }
   }
 
+  private static getCurrentPath(): string {
+    if (this.mode === 'hash') {
+      return window.location.hash.slice(1) || '/';
+    }
+    return window.location.pathname;
+  }
+
   static async navigate(path: string, updateHistory = true) {
     console.log(`Navigating to: ${path}`);
     const route = this.routes.get(path);
@@ -112,7 +124,11 @@ export class Router {
         );
 
         if (updateHistory) {
-          history.pushState({}, "", path);
+          if (this.mode === 'hash') {
+            window.location.hash = path;
+          } else {
+            history.pushState({}, "", path);
+          }
         }
       } catch (error) {
         console.error("Navigation error:", error);
@@ -143,7 +159,9 @@ export class Router {
     return params;
   }
 
-  static init() {
+  static init(options: RouterOptions = {}) {
+    this.mode = options.mode || 'history';
+    
     this.routerViewElement = document.querySelector("router-view");
     if (!this.routerViewElement) {
       this.routerViewElement = document.createElement("router-view");
@@ -151,9 +169,15 @@ export class Router {
       console.log("Created router-view element dynamically");
     }
 
-    window.addEventListener("popstate", () => {
-      this.navigate(location.pathname, false);
-    });
+    if (this.mode === 'hash') {
+      window.addEventListener("hashchange", () => {
+        this.navigate(this.getCurrentPath(), false);
+      });
+    } else {
+      window.addEventListener("popstate", () => {
+        this.navigate(this.getCurrentPath(), false);
+      });
+    }
 
     document.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
@@ -166,7 +190,7 @@ export class Router {
 
     this.initialized = true;
 
-    console.log(`Initial navigation to: ${location.pathname}`);
-    this.navigate(location.pathname, false);
+    console.log(`Initial navigation to: ${this.getCurrentPath()}`);
+    this.navigate(this.getCurrentPath(), false);
   }
 }
